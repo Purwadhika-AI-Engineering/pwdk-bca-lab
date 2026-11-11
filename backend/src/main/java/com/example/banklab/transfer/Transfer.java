@@ -44,6 +44,8 @@ public class Transfer {
 
     private String status;
 
+    private String channel;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
