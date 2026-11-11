@@ -1,0 +1,12 @@
+# Frontend only, in Docker. Use this when the backend runs on your machine
+# (IntelliJ, Maven, or the backend container on port 8080).
+#   docker compose up --build      -> http://localhost:4200
+services:
+  frontend:
+    build: .
+    ports:
+      - "4200:80"
+    environment:
+      BACKEND_URL: http://host.docker.internal:8080
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

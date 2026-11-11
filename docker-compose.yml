@@ -1,0 +1,22 @@
+# Both apps:        docker compose up --build
+# Backend only:     docker compose up --build backend
+# Frontend only:    see frontend/docker-compose.yml
+# Frontend: http://localhost:4200   Backend: http://localhost:8080
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8080:8080"
+    environment:
+      TZ: Asia/Jakarta
+      # lets you open the H2 console from your browser outside the container
+      SPRING_H2_CONSOLE_SETTINGS_WEB_ALLOW_OTHERS: "true"
+
+  frontend:
+    build: ./frontend
+    environment:
+      BACKEND_URL: http://backend:8080
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend

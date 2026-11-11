@@ -1,0 +1,18 @@
+# BACKEND_URL is filled in when the container starts.
+# Backend in the same compose file: http://backend:8080
+# Backend on your machine (IntelliJ, Maven): http://host.docker.internal:8080
+server {
+    listen 80;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location /api/ {
+        proxy_pass ${BACKEND_URL};
+        proxy_set_header Host $host;
+    }
+
+    # Angular routes such as /transfer
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
