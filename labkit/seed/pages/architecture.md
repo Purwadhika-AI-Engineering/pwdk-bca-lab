@@ -26,7 +26,7 @@ The web app calls the API under `/api`. The API keeps all data in H2. On restart
 | Call | Used for |
 |---|---|
 | `POST /api/auth/login` | Login, returns a token |
-| `GET /api/accounts` | Accounts of the logged-in user |
+| `GET /api/accounts?owner=<name>` | Dashboard: the customer's accounts |
 | `GET /api/accounts/{id}/summary` | One account with recent activity |
 | `POST /api/transfers/inquiry` | Look up the target account and name |
 | `POST /api/transfers` | Make a transfer (needs `Idempotency-Key`) |

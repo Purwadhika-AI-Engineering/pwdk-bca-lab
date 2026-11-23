@@ -1,0 +1,50 @@
+{
+  "_note": "Traffic for the labkit Grafana mock. Money moves in pairs, so balances end where they started (except one small transfer to another bank). Run: node labkit/traffic.mjs",
+  "password": "Password123!",
+  "steps": [
+    { "as": "andi", "call": "login", "expect": 200 },
+    { "as": "budi", "call": "login", "expect": 200 },
+    { "as": "citra", "call": "login", "expect": 200 },
+
+    { "as": "andi", "call": "GET /api/accounts?owner=Andi%20Wijaya", "expect": 200 },
+    { "as": "andi", "call": "GET /api/accounts/1234567891/summary", "expect": 200 },
+    { "as": "citra", "call": "GET /api/accounts?owner=Citra%20Lestari", "expect": 200 },
+    { "as": "citra", "call": "GET /api/transfers", "expect": 200 },
+
+    { "name": "andi pays citra", "as": "andi", "call": "POST /api/transfers/inquiry", "body": { "bankCode": "999", "accountNo": "3456789012" }, "expect": 200 },
+    { "as": "andi", "call": "POST /api/transfers", "body": { "fromAccount": "1234567891", "toBankCode": "999", "toAccount": "3456789012", "amount": 150000, "note": "Arisan November" }, "expect": 201 },
+    { "name": "Lab 5 case: andi sends Rp50.000 to budi", "as": "andi", "call": "POST /api/transfers/inquiry", "body": { "bankCode": "999", "accountNo": "2345678901" }, "expect": 200 },
+    { "as": "andi", "call": "POST /api/transfers", "body": { "fromAccount": "1234567890", "toBankCode": "999", "toAccount": "2345678901", "amount": 50000, "note": "Makan siang" }, "expect": 201 },
+    { "as": "andi", "call": "GET /api/accounts?owner=Andi%20Wijaya", "expect": 200 },
+    { "as": "andi", "call": "GET /api/accounts/1234567890/summary", "expect": 200 },
+
+    { "name": "retry with the same Idempotency-Key (R10)", "as": "budi", "call": "POST /api/transfers", "body": { "fromAccount": "2345678901", "toBankCode": "999", "toAccount": "3456789012", "amount": 75000, "note": "Pulsa" }, "idempotencyKey": "retry-1", "expect": 201 },
+    { "as": "budi", "call": "POST /api/transfers", "body": { "fromAccount": "2345678901", "toBankCode": "999", "toAccount": "3456789012", "amount": 75000, "note": "Pulsa" }, "idempotencyKey": "retry-1", "expect": [200, 201] },
+
+    { "name": "transfer to another bank (R8)", "as": "citra", "call": "POST /api/transfers/inquiry", "body": { "bankCode": "009", "accountNo": "0456789123" }, "expect": 200 },
+    { "as": "citra", "call": "POST /api/transfers", "body": { "fromAccount": "3456789012", "toBankCode": "009", "toAccount": "0456789123", "amount": 25000, "note": "Kos" }, "expect": 201 },
+
+    { "name": "R3 below minimum", "as": "citra", "call": "POST /api/transfers", "body": { "fromAccount": "3456789012", "toBankCode": "999", "toAccount": "1234567891", "amount": 9999 }, "expect": 422 },
+    { "name": "R4 over daily limit", "as": "andi", "call": "POST /api/transfers", "body": { "fromAccount": "1234567890", "toBankCode": "999", "toAccount": "3456789012", "amount": 50000001 }, "expect": 422 },
+    { "name": "R5 not enough balance", "as": "citra", "call": "POST /api/transfers", "body": { "fromAccount": "3456789012", "toBankCode": "999", "toAccount": "2345678901", "amount": 5000000 }, "expect": 422 },
+    { "name": "R6 same account", "as": "budi", "call": "POST /api/transfers", "body": { "fromAccount": "2345678901", "toBankCode": "999", "toAccount": "2345678901", "amount": 20000 }, "expect": 422 },
+    { "name": "R2 not your account", "as": "budi", "call": "POST /api/transfers", "body": { "fromAccount": "1234567890", "toBankCode": "999", "toAccount": "2345678901", "amount": 20000 }, "expect": 403 },
+    { "name": "R7 unknown target", "as": "andi", "call": "POST /api/transfers/inquiry", "body": { "bankCode": "002", "accountNo": "0000000000" }, "expect": 404 },
+    { "name": "unknown bank", "as": "andi", "call": "POST /api/transfers/inquiry", "body": { "bankCode": "777", "accountNo": "0011223344" }, "expect": 422 },
+    { "name": "wrong password", "as": "citra", "call": "login", "password": "wrong-password", "expect": 401 },
+    { "name": "no token", "as": null, "call": "GET /api/accounts", "expect": 401 },
+
+    { "name": "money back, so balances end as they started", "as": "citra", "call": "POST /api/transfers", "body": { "fromAccount": "3456789012", "toBankCode": "999", "toAccount": "1234567891", "amount": 150000, "note": "Arisan balik" }, "expect": 201 },
+    { "as": "budi", "call": "POST /api/transfers", "body": { "fromAccount": "2345678901", "toBankCode": "999", "toAccount": "1234567890", "amount": 50000, "note": "Balik makan siang" }, "expect": 201 },
+    { "as": "citra", "call": "POST /api/transfers", "body": { "fromAccount": "3456789012", "toBankCode": "999", "toAccount": "2345678901", "amount": 75000, "note": "Pulsa balik" }, "expect": 201 },
+    { "as": "budi", "call": "GET /api/transfers", "expect": 200 }
+  ],
+  "loop": [
+    { "as": "andi", "call": "GET /api/accounts?owner=Andi%20Wijaya", "expect": 200 },
+    { "as": "citra", "call": "POST /api/transfers", "body": { "fromAccount": "3456789012", "toBankCode": "999", "toAccount": "1234567891", "amount": 10000, "note": "Kopi" }, "expect": 201 },
+    { "as": "budi", "call": "GET /api/transfers", "expect": 200 },
+    { "as": "andi", "call": "POST /api/transfers", "body": { "fromAccount": "1234567891", "toBankCode": "999", "toAccount": "3456789012", "amount": 10000, "note": "Kopi balik" }, "expect": 201 },
+    { "as": "citra", "call": "POST /api/transfers", "body": { "fromAccount": "3456789012", "toBankCode": "999", "toAccount": "1234567891", "amount": 5000 }, "expect": 422 },
+    { "as": null, "call": "GET /api/transfers", "expect": 401 }
+  ]
+}
