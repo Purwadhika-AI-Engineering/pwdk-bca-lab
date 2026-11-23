@@ -12,6 +12,21 @@ This is legacy-style code: it works, but it has no tests and no steering files y
 | `docs/team-rules.md` | Team coding, test and security rules (dummy), the source for your steering files |
 | `templates/test-cases.md` | Format for the test-case list. In Lab 2 you fill it and save it as `docs/test-cases.md` |
 | `postman/` | Postman collection and the `sit` environment |
+| `labkit/` | Day 2 "staging" on your laptop: Jira, Confluence, Grafana and a read-only DB for Kiro, through MCP. See [`labkit/README.md`](labkit/README.md) |
+
+## Day 2: labkit
+
+On Day 2 you work with Kiro on tickets, logs and data, like on a real team. Labkit runs all of it on your laptop:
+
+```mermaid
+flowchart LR
+  kiro["Kiro"] -- "MCP" --> labkit["Labkit<br/>Jira, Confluence, Grafana"]
+  kiro -- "MCP, read-only" --> db["Staging DB"]
+  labkit -- "reads logs" --> app["Lab Bank backend<br/>labkit profile"]
+  db --- app
+```
+
+Start with [`labkit/README.md`](labkit/README.md): it has the setup steps, the full architecture and troubleshooting.
 
 ## Run it
 

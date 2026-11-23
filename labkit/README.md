@@ -31,6 +31,88 @@ Labkit is a small "staging" for Day 2. It gives Kiro a Jira, a Confluence, Grafa
 
 Kiro talks to these through four MCP servers: `labkit-atlassian`, `labkit-grafana`, `labkit-db` and `labkit-ping`.
 
+## Architecture
+
+Everything runs on your laptop and listens on `127.0.0.1` only.
+
+```mermaid
+flowchart TB
+  subgraph clients["You"]
+    direction LR
+    kiro["Kiro"]
+    browser["Browser"]
+  end
+
+  subgraph access["How they connect"]
+    direction LR
+    mcp["MCP servers (labkit/mcp)<br/>atlassian.mjs, grafana.mjs, db.mjs<br/>started by Kiro, stdio"]
+    gw["Gateway :80 or :8000<br/>*.labbank.localhost<br/>optional"]
+  end
+
+  subgraph svc["Labkit services (start.cmd)"]
+    direction LR
+    hub["Hub :4300<br/>status, reset, API token"]
+    atl["Jira + Confluence :4310<br/>node:sqlite"]
+    gra["Grafana :4330<br/>logs and metrics"]
+  end
+
+  subgraph app["Lab Bank app"]
+    direction LR
+    fe["Web app :4200<br/>Angular"]
+    be["Backend :8080<br/>Spring Boot, labkit profile"]
+    pg["Staging DB :5435<br/>Postgres protocol, read-only"]
+  end
+
+  subgraph data["Data"]
+    direction LR
+    sqlite[("atlassian.db")]
+    log[/"logs/app.json<br/>JSON, masked"/]
+    h2[("H2 in memory")]
+  end
+
+  kiro -- "stdio (default)" --> mcp
+  kiro -. "HTTP + API token" .-> gw
+  browser --> gw
+  mcp -- "REST" --> atl
+  mcp -- "REST" --> gra
+  mcp -- "SQL" --> pg
+  gw --> svc
+  gw --> fe
+  fe -- "/api" --> be
+  atl --> sqlite
+  be -- "writes" --> log
+  gra -- "reads" --> log
+  be --> h2
+  pg -- "read-only view" --> h2
+```
+
+| Part | What it does |
+|---|---|
+| MCP servers | Small Node programs. Kiro starts them and talks to them over stdio. Each turns tool calls into REST calls or SQL. |
+| Gateway | Optional. Sends each `*.labbank.localhost` name to the right port, so you can use names instead of ports. |
+| Jira + Confluence | A mock with Jira- and Confluence-shaped REST APIs, stored in `labkit/data/atlassian.db`. |
+| Grafana | A mock that reads the backend's JSON log, and answers log queries (LogQL) and metric queries (PromQL). |
+| Backend, labkit profile | The normal app, plus JSON logs with masked account numbers, and a read-only staging DB for `db.mjs`. Without the profile it runs as before. |
+
+A typical Day 2 loop, as Kiro sees it:
+
+```mermaid
+sequenceDiagram
+  actor P as You
+  participant K as Kiro
+  participant J as Jira
+  participant G as Grafana
+  participant D as Staging DB
+  participant C as Confluence
+  P->>K: Pick up the newest customer report
+  K->>J: searchJiraIssuesUsingJql, getJiraIssue
+  K->>G: query_loki_logs (errors, traceId)
+  K->>D: query (SELECT only)
+  K->>J: addCommentToJiraIssue, transitionJiraIssue
+  K->>C: createConfluencePage (postmortem)
+  K-->>P: Summary with links
+```
+
 ## What you need
 
 - Windows 10 or 11, Mac or Linux
@@ -63,7 +145,7 @@ Open two terminals in the repo folder.
 labkit\start.cmd
 ```
 
-Wait for three `OK` lines. Keep this window open.
+Wait for the `OK` lines. Keep this window open. The `gateway` line may say `OFF`; labkit still works on the `127.0.0.1` addresses.
 
 **Terminal 2: the backend, with the labkit profile**
 
@@ -73,12 +155,22 @@ labkit\backend.cmd
 
 Wait for `Started BankLabApplication`. The first start downloads Maven and needs a few minutes.
 
+On a Mac or Linux, use these instead of the `.cmd` files:
+
+| Step | Command (repo folder) |
+|---|---|
+| Preflight | `node labkit/preflight.mjs` |
+| Labkit | `node labkit/start.mjs` |
+| Backend | `cd backend && SPRING_PROFILES_ACTIVE=labkit ./mvnw spring-boot:run` |
+| Traffic | `node labkit/traffic.mjs` |
+| Reset | `node labkit/cli.mjs reset` |
+
 > In PowerShell, use `labkit\backend.cmd` too. If you run Maven yourself, quote the profile:
 > `.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=labkit"`
 
 Optional, **Terminal 3: the web app**: `cd frontend`, then `npm start`.
 
-Now open http://127.0.0.1:4300. All parts should show a green dot (the web app only if you started it).
+Now open the hub: http://labkit.localhost (on a Mac: http://labkit.localhost:8000, or always http://127.0.0.1:4300). All parts should show a green dot (the web app only if you started it).
 
 ## 3. Connect Kiro
 
@@ -223,12 +315,18 @@ To turn it on, set `"disabled": false` for `playwright` in `.kiro/settings/mcp.j
 - Backend changes for labkit live in one package, `com.example.banklab.labkit`, and only load with the `labkit` profile. Without the profile the app behaves as before.
 - Run the labkit tests: `node --test labkit/test/*.test.mjs`. With labkit and the backend running, `set LABKIT_E2E=1` first to also run the end-to-end check.
 
-## How it works
+## Code map
 
-```
-Kiro ──stdio──► labkit/mcp/atlassian.mjs ──HTTP──► services/atlassian  :4310  (node:sqlite)
-     ──stdio──► labkit/mcp/grafana.mjs   ──HTTP──► services/grafana    :4330  (reads backend/logs/app.json)
-     ──stdio──► labkit/mcp/db.mjs        ──PG────► backend, H2 PG server :5435 (read-only user)
-```
+| Folder | What is in it |
+|---|---|
+| `labkit/lib/` | Shared code: MCP over stdio and HTTP (`mcp.mjs`), HTTP helpers, Postgres client (`pg.mjs`), host names and gateway, API token |
+| `labkit/mcp/` | The MCP servers Kiro starts: `atlassian.mjs`, `grafana.mjs`, `db.mjs`, `ping.mjs` |
+| `labkit/services/` | The services `start.cmd` runs: `hub`, `atlassian`, `grafana`, `gateway`, each with its web page in `ui/` |
+| `labkit/seed/` | Jira tickets, Confluence pages and the traffic scenario |
+| `labkit/test/` | Tests: `node --test labkit/test/*.test.mjs` |
+| `backend/.../labkit/` | Backend code for the `labkit` profile: JSON request log with masking, read-only staging DB |
+| `.kiro/settings/mcp.json` | Registers the local MCP servers in Kiro |
 
-See `labkit/PLAN.md` for the design.
+No npm or Maven dependencies were added. Labkit uses Node built-ins only (`node:http`, `node:sqlite`, `node:test`).
+
+See `labkit/PLAN.md` for the design and the reasons behind it.
