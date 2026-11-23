@@ -13,6 +13,7 @@ Labkit is a local "BCA staging" for Day 2. Participants practise agentic work on
 | Node 22 or newer, JDK 17 | Use built-ins only: `node:http`, `node:sqlite`, `node:test`, global `fetch` and `WebSocket`. |
 | No new tools, npm and Maven access unknown | Zero npm dependencies. No new Maven dependencies. Playwright MCP is the only optional extra. |
 | MCP works for local servers only | Every mock has a stdio MCP server. A CLI calls the same endpoints, as a fallback. |
+| Remote MCP is common at work | Each service also serves its tools at a URL (`/mcp`, MCP Streamable HTTP, Bearer token from `data/mcp-token.txt`), so participants can practise the URL + token setup. stdio stays the default. |
 | Jira and Confluence | One Atlassian mock. Tool names follow the Atlassian MCP server, so prompts carry over. |
 
 ## Architecture
@@ -38,7 +39,8 @@ labkit/
   cli.mjs                           fallback for every MCP tool
   traffic.mjs                       drives the API to fill the logs
   lib/
-    mcp.mjs                         stdio JSON-RPC: initialize, tools/list, tools/call
+    mcp.mjs                         JSON-RPC: initialize, tools/list, tools/call; stdio and Streamable HTTP (mountHttp)
+    token.mjs                       API token for the remote endpoints, and their URLs
     http.mjs                        tiny router + JSON helpers
     pg.mjs                          minimal Postgres wire client (startup, password, simple query)
   services/

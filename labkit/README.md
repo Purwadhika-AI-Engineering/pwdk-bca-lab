@@ -79,6 +79,38 @@ The hub has the same config under **Show config with full paths**.
 
 Kiro runs read-only tools without asking. It asks you before it changes Jira or Confluence, and before every SQL query.
 
+## 3b. Optional: connect like a remote server
+
+Real products (Atlassian, GitHub and others) give you a **URL** and a **sign-in or API token**, not a program to run. Labkit can act like that too, on `127.0.0.1`:
+
+| Server | URL |
+|---|---|
+| `labkit-atlassian` | `http://127.0.0.1:4310/mcp` |
+| `labkit-grafana` | `http://127.0.0.1:4330/mcp` |
+| `labkit-db` | `http://127.0.0.1:4300/mcp/db` |
+| `labkit-ping` | `http://127.0.0.1:4300/mcp/ping` |
+
+1. Open the hub. Under **Remote MCP servers (simulated)**, click **Show** to see your API token. Each laptop has its own.
+2. Put the servers in your **user** config, `%USERPROFILE%\.kiro\settings\mcp.json` (Mac: `~/.kiro/settings/mcp.json`), not in the repo. A token in the repo ends up in git.
+3. One entry looks like this:
+
+```json
+{
+  "mcpServers": {
+    "labkit-atlassian": {
+      "url": "http://127.0.0.1:4310/mcp",
+      "headers": { "Authorization": "Bearer <your labkit API token>" }
+    }
+  }
+}
+```
+
+4. Reload the MCP servers in Kiro. Without the token, or with a wrong one, the server answers `401`.
+
+The hub's **Show remote config** button, or `node labkit\cli.mjs kiro-config --remote`, prints the full config with your token. Use either the local servers (section 3) or the remote ones, not both, or Kiro shows every tool twice.
+
+The remote endpoints follow the MCP "Streamable HTTP" transport: `POST` with JSON-RPC, an `Mcp-Session-Id` from `initialize`, `401` without a valid Bearer token, `403` for a web page from another origin.
+
 ## 4. Try it
 
 Ask Kiro, one by one:

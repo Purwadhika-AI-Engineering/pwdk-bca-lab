@@ -198,11 +198,13 @@ async function reset() {
   return res.ok;
 }
 
-/** Prints the Kiro MCP config, or writes it with --write. --absolute uses full paths (fallback for Windows). */
+/** Prints the Kiro MCP config, or writes it with --write. --absolute uses full paths (fallback for Windows); --remote uses URLs + token. */
 async function kiroConfig(args) {
   const { mcpConfig, ROOT } = await import(pathToFileURL(path.join(HERE, 'services', 'hub', 'server.mjs')).href);
   const absolute = args.includes('--absolute');
-  const text = JSON.stringify(mcpConfig({ absolute, node: absolute ? process.execPath : 'node' }), null, 2) + '\n';
+  const remote = args.includes('--remote');
+  const token = remote ? (await import(pathToFileURL(path.join(HERE, 'lib', 'token.mjs')).href)).getToken() : undefined;
+  const text = JSON.stringify(mcpConfig({ absolute, remote, token, node: absolute ? process.execPath : 'node' }), null, 2) + '\n';
   if (!args.includes('--write')) {
     process.stdout.write(text);
     return 0;
@@ -221,7 +223,7 @@ export async function main(argv = process.argv.slice(2)) {
     for (const [name, s] of Object.entries(SERVICES)) console.log(`  node labkit/cli.mjs ${name.padEnd(10)} ${s.about}`);
     console.log('  node labkit/cli.mjs status     check what is running');
     console.log('  node labkit/cli.mjs reset      restore the Jira + Confluence seed data');
-    console.log('  node labkit/cli.mjs kiro-config [--absolute] [--write]   print or write .kiro/settings/mcp.json');
+    console.log('  node labkit/cli.mjs kiro-config [--absolute|--remote] [--write]   print or write .kiro/settings/mcp.json');
     return 0;
   }
   if (service === 'status') return status().then(() => 0);

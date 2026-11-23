@@ -12,6 +12,7 @@
 // A handler returns a string or any JSON value (sent as text). Throwing an error
 // returns a tool result with isError: true, so the agent sees the message.
 
+import crypto from 'node:crypto';
 import readline from 'node:readline';
 
 export const SUPPORTED_PROTOCOLS = ['2025-06-18', '2025-03-26', '2024-11-05'];
@@ -129,4 +130,91 @@ export function runStdio(server, { input = process.stdin, output = process.stdou
     process.exit(0);
   });
   process.stderr.write(`[${server.name}] MCP server ready (stdio)\n`);
+}
+
+// ---------- Streamable HTTP transport (simulated remote MCP server) ----------
+//
+// Follows the MCP "Streamable HTTP" transport: one URL; the client POSTs JSON-RPC and gets
+// JSON back. The server gives an Mcp-Session-Id on initialize. GET (server-sent stream) is not
+// offered (405), like many real servers. Like a real remote server it needs a Bearer token.
+// It also checks the Origin header, so a web page cannot call it (DNS rebinding).
+
+
+const LOCAL_ORIGIN = /^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i;
+
+function sendJson(res, status, body, headers = {}) {
+  const data = body === undefined ? '' : JSON.stringify(body);
+  res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store', ...headers });
+  res.end(data);
+}
+
+/** True if the Authorization header carries the token. Constant-time compare. */
+export function checkBearer(header, token) {
+  const m = /^Bearer\s+(\S+)$/i.exec(header || '');
+  if (!m) return false;
+  const a = Buffer.from(m[1]);
+  const b = Buffer.from(token);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+/**
+ * Adds an MCP endpoint to a router from lib/http.mjs, for example router + '/mcp'.
+ * Options: token (required Bearer token, or null for none), maxSessions.
+ */
+export function mountHttp(router, path, server, { token, maxSessions = 1000 } = {}) {
+  const sessions = new Map(); // id -> last use (ms)
+
+  function guard(req, res) {
+    const origin = req.headers.origin;
+    if (origin && !LOCAL_ORIGIN.test(origin)) {
+      sendJson(res, 403, rpcError(null, -32000, `Origin ${origin} is not allowed`));
+      return false;
+    }
+    if (token && !checkBearer(req.headers.authorization, token)) {
+      sendJson(res, 401, rpcError(null, -32001, 'Missing or wrong API token. Add the header "Authorization: Bearer <token>". Get the token on the labkit hub (http://127.0.0.1:4300).'), {
+        'www-authenticate': 'Bearer realm="labkit"',
+      });
+      return false;
+    }
+    return true;
+  }
+
+  router.post(path, async ({ req, res, body }) => {
+    if (!guard(req, res)) return;
+    const batch = Array.isArray(body) ? body : [body];
+    if (!body || !batch.length) return sendJson(res, 400, rpcError(null, -32600, 'Empty request'));
+    const isInit = batch.some((m) => m?.method === 'initialize');
+    const sid = req.headers['mcp-session-id'];
+    const headers = {};
+    if (isInit) {
+      const id = crypto.randomUUID();
+      if (sessions.size >= maxSessions) sessions.delete(sessions.keys().next().value);
+      sessions.set(id, Date.now());
+      headers['mcp-session-id'] = id;
+    } else if (sid) {
+      if (!sessions.has(sid)) return sendJson(res, 404, rpcError(null, -32002, 'Session not found. Initialize again.'));
+      sessions.set(sid, Date.now());
+    }
+    const replies = (await Promise.all(batch.map((m) => handleMessage(server, m)))).filter(Boolean);
+    if (!replies.length) {
+      res.writeHead(202, headers);
+      return res.end();
+    }
+    sendJson(res, 200, Array.isArray(body) ? replies : replies[0], headers);
+  });
+
+  router.get(path, ({ req, res }) => {
+    if (!guard(req, res)) return;
+    sendJson(res, 405, rpcError(null, -32000, 'This server does not open a stream. Use POST.'), { allow: 'POST, DELETE' });
+  });
+
+  router.delete(path, ({ req, res }) => {
+    if (!guard(req, res)) return;
+    const sid = req.headers['mcp-session-id'];
+    if (sid) sessions.delete(sid);
+    res.writeHead(204);
+    res.end();
+  });
+
+  return { sessions };
 }

@@ -9,6 +9,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import { createRouter, listen, reply, HttpError } from '../../lib/http.mjs';
+import { mountHttp } from '../../lib/mcp.mjs';
 import { compileJql, toIso, QueryError } from './jql.mjs';
 import { compileCql } from './cql.mjs';
 
@@ -484,8 +485,10 @@ export function createStore({ dbPath = ':memory:', seedPath = DEFAULT_SEED, now 
   };
 }
 
-export function createApp(store) {
+/** mcp: { server, token } mounts the simulated remote MCP endpoint at /mcp. */
+export function createApp(store, { mcp } = {}) {
   const r = createRouter();
+  if (mcp) mountHttp(r, '/mcp', mcp.server, { token: mcp.token });
   r.get('/health', () => ({ ok: true, service: 'atlassian' }));
   r.post('/admin/reset', () => {
     store.reset();
@@ -539,6 +542,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const store = createStore({ dbPath, seedPath: arg('seed', DEFAULT_SEED) });
   const empty = store.db.prepare('SELECT count(*) AS n FROM projects').get().n === 0;
   if (empty || process.argv.includes('--reset')) store.reset();
-  const server = await listen(createApp(store), port);
-  console.log(`[atlassian] Jira + Confluence mock on http://127.0.0.1:${server.address().port} (db ${dbPath})`);
+  process.env.LABKIT_ATLASSIAN_URL ||= `http://127.0.0.1:${port}`;
+  const { server: mcpServer } = await import('../../mcp/atlassian.mjs');
+  const { getToken } = await import('../../lib/token.mjs');
+  const server = await listen(createApp(store, { mcp: { server: mcpServer, token: getToken() } }), port);
+  console.log(`[atlassian] Jira + Confluence mock on http://127.0.0.1:${server.address().port} (db ${dbPath}), remote MCP at /mcp`);
 }

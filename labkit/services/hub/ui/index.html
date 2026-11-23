@@ -57,6 +57,16 @@
     </section>
 
     <section class="card">
+      <h2>Remote MCP servers (simulated)</h2>
+      <p class="muted">Real products give you a URL and a sign-in or API token. Labkit does the same on 127.0.0.1, so you can practise the remote setup.</p>
+      <table id="remote" style="width:100%;border-collapse:collapse;font-size:13px"></table>
+      <p>Your API token: <code id="token">••••••••</code> <button class="secondary" id="revealToken">Show</button> <button class="secondary" id="copyToken">Copy</button></p>
+      <p class="muted">Treat it like a password: do not paste it into tickets, chats or commits.</p>
+      <div class="actions"><button class="secondary" id="showRemote">Show remote config</button><button class="secondary" id="copyRemote" hidden>Copy</button></div>
+      <pre id="remoteConfig" hidden></pre>
+    </section>
+
+    <section class="card">
       <h2>Facilitator tools</h2>
       <div class="actions">
         <button id="traffic">Run traffic</button>
@@ -125,6 +135,20 @@
       $('copyConfig').hidden = false;
     };
     $('copyConfig').onclick = () => navigator.clipboard.writeText($('config').textContent).then(() => ($('msg').textContent = 'Config copied.'));
+    let remote = null;
+    fetch('/api/remote-mcp').then((r) => r.json()).then((d) => {
+      remote = d;
+      $('remote').innerHTML = '<tr><th align="left">Server</th><th align="left">URL</th></tr>' + d.servers.map((s) => `<tr><td><code>${esc(s.name)}</code></td><td><code>${esc(s.url)}</code></td></tr>`).join('');
+    });
+    $('revealToken').onclick = () => ($('token').textContent = $('token').textContent.startsWith('•') ? remote?.token : '••••••••');
+    $('copyToken').onclick = () => navigator.clipboard.writeText(remote?.token || '').then(() => ($('msg').textContent = 'Token copied.'));
+    $('showRemote').onclick = async () => {
+      const cfg = await (await fetch('/api/mcp-config?mode=remote')).json();
+      $('remoteConfig').textContent = JSON.stringify(cfg, null, 2);
+      $('remoteConfig').hidden = false;
+      $('copyRemote').hidden = false;
+    };
+    $('copyRemote').onclick = () => navigator.clipboard.writeText($('remoteConfig').textContent).then(() => ($('msg').textContent = 'Remote config copied.'));
     status();
     setInterval(status, 3000);
   </script>

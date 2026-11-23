@@ -6,6 +6,8 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createRouter, listen, HttpError } from '../../lib/http.mjs';
+import { mountHttp } from '../../lib/mcp.mjs';
+import { REMOTE } from '../../lib/token.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const LABKIT = path.resolve(HERE, '..', '..');
@@ -49,10 +51,18 @@ async function check(part) {
   }
 }
 
-/** The Kiro MCP config. absolute=true writes full paths, for when Kiro does not start servers from the workspace folder. */
-export function mcpConfig({ absolute = false, root = ROOT, node = 'node' } = {}) {
+/**
+ * The Kiro MCP config.
+ * - local (default): Kiro starts each server with node over stdio. absolute=true writes full paths.
+ * - remote: each server is a URL with a Bearer token, like a hosted MCP server.
+ */
+export function mcpConfig({ absolute = false, root = ROOT, node = 'node', remote = false, token = '<your labkit API token>' } = {}) {
   const file = (name) => (absolute ? path.join(root, 'labkit', 'mcp', name) : `labkit/mcp/${name}`);
-  const entry = (name, autoApprove) => ({ command: node, args: [file(name)], env: {}, disabled: false, autoApprove });
+  const entry = (name, autoApprove) => {
+    if (!remote) return { command: node, args: [file(name)], env: {}, disabled: false, autoApprove };
+    const id = Object.keys(REMOTE).find((k) => REMOTE[k].file === name);
+    return { url: REMOTE[id].url, headers: { Authorization: `Bearer ${token}` }, disabled: false, autoApprove };
+  };
   return {
     mcpServers: {
       'labkit-ping': entry('ping.mjs', ['ping']),
@@ -66,8 +76,13 @@ export function mcpConfig({ absolute = false, root = ROOT, node = 'node' } = {})
 
 let trafficRun = null;
 
-export function createApp() {
+/** mcp: { db, ping, token } mounts the simulated remote MCP endpoints /mcp/db and /mcp/ping. */
+export function createApp({ mcp } = {}) {
   const r = createRouter();
+  if (mcp) {
+    mountHttp(r, '/mcp/db', mcp.db, { token: mcp.token });
+    mountHttp(r, '/mcp/ping', mcp.ping, { token: mcp.token });
+  }
   r.get('/health', () => ({ ok: true, service: 'hub' }));
   r.get('/api/status', async () => ({ parts: await Promise.all(PARTS.map(check)), time: new Date().toISOString() }));
   r.post('/api/reset', async () => {
@@ -91,7 +106,16 @@ export function createApp() {
     return { ok: true };
   });
   r.get('/api/traffic', () => trafficRun || { running: false, output: '', code: null });
-  r.get('/api/mcp-config', ({ query }) => mcpConfig({ absolute: query.absolute === '1' || query.absolute === 'true', node: query.absolute ? process.execPath : 'node' }));
+  r.get('/api/mcp-config', ({ query }) =>
+    query.mode === 'remote'
+      ? mcpConfig({ remote: true, token: mcp?.token })
+      : mcpConfig({ absolute: query.absolute === '1' || query.absolute === 'true', node: query.absolute ? process.execPath : 'node' }),
+  );
+  // The token is only for this laptop: refuse requests that come in under another host name (DNS rebinding).
+  r.get('/api/remote-mcp', ({ req }) => {
+    if (!/^(127\.0\.0\.1|localhost)(:\d+)?$/i.test(req.headers.host || '')) throw new HttpError(403, 'Forbidden');
+    return { token: mcp?.token || null, servers: Object.entries(REMOTE).map(([name, v]) => ({ name, url: v.url })) };
+  });
   r.get('/api/events', async () => {
     const res = await fetch('http://127.0.0.1:4310/admin/events').catch(() => null);
     return res?.ok ? res.json() : { events: [] };
@@ -103,6 +127,9 @@ export function createApp() {
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const i = process.argv.indexOf('--port');
   const port = Number(i > 0 ? process.argv[i + 1] : process.env.LABKIT_HUB_PORT || DEFAULT_PORT);
-  const server = await listen(createApp(), port);
+  const { getToken } = await import('../../lib/token.mjs');
+  const { server: db } = await import('../../mcp/db.mjs');
+  const { server: ping } = await import('../../mcp/ping.mjs');
+  const server = await listen(createApp({ mcp: { db, ping, token: getToken() } }), port);
   console.log(`[hub] http://127.0.0.1:${server.address().port}`);
 }

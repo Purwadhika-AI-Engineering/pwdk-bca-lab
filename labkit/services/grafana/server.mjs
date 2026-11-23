@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRouter, listen, HttpError } from '../../lib/http.mjs';
+import { mountHttp } from '../../lib/mcp.mjs';
 import { parseLogQL, filterEntries, evalMetric, flatten, parseDuration, LogQLError } from './logql.mjs';
 import { parsePromQL, evalPromQL, METRICS, PromQLError } from './promql.mjs';
 
@@ -289,8 +290,10 @@ export function dashboard(index, now = Date.now(), minutes = 30) {
   };
 }
 
-export function createApp(index, tailer) {
+/** mcp: { server, token } mounts the simulated remote MCP endpoint at /mcp. */
+export function createApp(index, tailer, { mcp } = {}) {
   const r = createRouter();
+  if (mcp) mountHttp(r, '/mcp', mcp.server, { token: mcp.token });
   const range = (q) => {
     const now = Date.now();
     const end = parseTime(q.end, now, now);
@@ -334,7 +337,10 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const index = createIndex();
   const tailer = createTailer(file, index);
   tailer.start();
-  const server = await listen(createApp(index, tailer), port);
-  console.log(`[grafana] logs + metrics mock on http://127.0.0.1:${server.address().port} (reading ${file})`);
+  process.env.LABKIT_GRAFANA_URL ||= `http://127.0.0.1:${port}`;
+  const { server: mcpServer } = await import('../../mcp/grafana.mjs');
+  const { getToken } = await import('../../lib/token.mjs');
+  const server = await listen(createApp(index, tailer, { mcp: { server: mcpServer, token: getToken() } }), port);
+  console.log(`[grafana] logs + metrics mock on http://127.0.0.1:${server.address().port} (reading ${file}), remote MCP at /mcp`);
   if (!fs.existsSync(file)) console.log('[grafana] log file not found yet. Start the backend with the labkit profile; it is picked up within a second.');
 }
