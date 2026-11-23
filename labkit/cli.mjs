@@ -177,6 +177,7 @@ async function status() {
     try {
       await resolveTool(tools, {}, 'list_tables').handler({});
       console.log('db         up (127.0.0.1:5435)');
+      await (await import(pathToFileURL(path.join(HERE, SERVICES.db.file)).href)).close();
     } catch (err) {
       console.log(`db         DOWN  ${err.message.split('\n')[0]}`);
     }
@@ -217,6 +218,7 @@ export async function main(argv = process.argv.slice(2)) {
   try {
     const { args, flags } = parseArgs(rest, tool.inputSchema);
     const result = await tool.handler(args);
+    if (service === 'db') await (await import(pathToFileURL(path.join(HERE, SERVICES.db.file)).href)).close();
     console.log(typeof result === 'string' ? result : JSON.stringify(result, null, flags.json ? 0 : 2));
     return 0;
   } catch (err) {
