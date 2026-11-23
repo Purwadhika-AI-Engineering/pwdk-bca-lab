@@ -2,10 +2,35 @@
   "mcpServers": {
     "labkit-ping": {
       "command": "node",
-      "args": ["labkit/mcp/ping.mjs"],
+      "args": [
+        "labkit/mcp/ping.mjs"
+      ],
       "env": {},
       "disabled": false,
-      "autoApprove": ["ping"]
+      "autoApprove": [
+        "ping"
+      ]
+    },
+    "labkit-atlassian": {
+      "command": "node",
+      "args": [
+        "labkit/mcp/atlassian.mjs"
+      ],
+      "env": {},
+      "disabled": false,
+      "autoApprove": [
+        "getAccessibleAtlassianResources",
+        "atlassianUserInfo",
+        "lookupJiraAccountId",
+        "getVisibleJiraProjects",
+        "searchJiraIssuesUsingJql",
+        "getJiraIssue",
+        "getTransitionsForJiraIssue",
+        "getConfluenceSpaces",
+        "getPagesInConfluenceSpace",
+        "searchConfluenceUsingCql",
+        "getConfluencePage"
+      ]
     }
   }
 }
