@@ -46,10 +46,10 @@
     <section class="card">
       <h2>Kiro MCP servers</h2>
       <ol class="steps">
-        <li>Open this repo folder in Kiro. It reads <code>.kiro/settings/mcp.json</code>.</li>
-        <li>In the Kiro panel, open <b>MCP servers</b>. You should see <code>labkit-ping</code>, <code>labkit-atlassian</code>, <code>labkit-grafana</code>, <code>labkit-db</code>.</li>
+        <li>Open this repo folder in Kiro. Add the MCP servers to <code>.kiro/settings/mcp.json</code> yourself: start with <code>labkit-ping</code> (<code>node labkit/mcp/ping.mjs</code>). Steps are in <code>labkit/README.md</code>, section 3.</li>
         <li>Ask Kiro: <i>"Call the labkit ping tool."</i> It should answer <code>pong</code>.</li>
-        <li>If the servers do not start, use full paths: copy the config below into <code>.kiro/settings/mcp.json</code>.</li>
+        <li>Then add <code>labkit-atlassian</code>, <code>labkit-grafana</code> and <code>labkit-db</code>, and test each one.</li>
+        <li>If a server does not start, use full paths. The button below shows the full config.</li>
       </ol>
       <div class="actions"><button class="secondary" id="showConfig">Show config with full paths</button><button class="secondary" id="copyConfig" hidden>Copy</button></div>
       <pre id="config" hidden></pre>

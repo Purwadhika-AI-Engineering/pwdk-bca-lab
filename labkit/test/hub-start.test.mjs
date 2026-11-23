@@ -6,10 +6,18 @@ import { fileURLToPath } from 'node:url';
 import { mcpConfig, createApp } from '../services/hub/server.mjs';
 import { listen, requestJson } from '../lib/http.mjs';
 
-test('committed .kiro/settings/mcp.json matches the hub generator', () => {
-  const committed = JSON.parse(fs.readFileSync(new URL('../../.kiro/settings/mcp.json', import.meta.url), 'utf8'));
-  assert.deepEqual(committed, mcpConfig());
-  assert.equal(committed.mcpServers.playwright.disabled, true);
+test('the repo has no Kiro MCP config: participants add it themselves', () => {
+  assert.equal(fs.existsSync(new URL('../../.kiro/settings/mcp.json', import.meta.url)), false);
+});
+
+test('the generated local config has every server, with relative paths', () => {
+  const cfg = mcpConfig({ gateway: null });
+  for (const name of ['labkit-ping', 'labkit-atlassian', 'labkit-grafana', 'labkit-db']) {
+    assert.equal(cfg.mcpServers[name].command, 'node');
+    assert.match(cfg.mcpServers[name].args[0], /^labkit\/mcp\/\w+\.mjs$/);
+  }
+  assert.equal(cfg.mcpServers.playwright.disabled, true);
+  assert.ok(!cfg.mcpServers['labkit-db'].autoApprove.includes('query'), 'SQL queries always ask first');
 });
 
 test('absolute config uses full paths that exist', () => {

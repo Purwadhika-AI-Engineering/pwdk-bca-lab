@@ -55,7 +55,7 @@ labkit/
   test/         *.test.mjs (node --test); e2e.test.mjs runs the Day 2 loop over stdio when LABKIT_E2E=1
   docs/img/     README screenshots
   data/         runtime files, gitignored
-.kiro/settings/mcp.json             registers the MCP servers
+.kiro/settings/mcp.json             NOT committed: participants write it (README section 3); cli.mjs kiro-config --write is the shortcut
 backend/                            small changes, only under the `labkit` Spring profile (Phase 2)
 ```
 

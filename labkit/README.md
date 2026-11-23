@@ -174,19 +174,48 @@ Now open the hub: http://labkit.localhost (on a Mac: http://labkit.localhost:800
 
 ## 3. Connect Kiro
 
-1. Open the repo folder in Kiro. Kiro reads `.kiro/settings/mcp.json`.
-2. Open the Kiro panel, then **MCP servers**. You should see `labkit-ping`, `labkit-atlassian`, `labkit-grafana` and `labkit-db`.
-3. In the chat, ask: *Call the labkit ping tool.* Kiro should answer with `pong`.
+The repo has no MCP config. You add the servers yourself, one at a time, and test each one.
 
-If the servers show an error, write the config with full paths and reload the servers in Kiro:
+1. In Kiro, open the **MCP servers** panel and open the **workspace** config. Or create the file `.kiro/settings/mcp.json` in the repo folder yourself. (Menu names can differ a little between Kiro versions.)
+2. Add the smallest server first and save:
 
-```bat
-node labkit\cli.mjs kiro-config --absolute --write
+```json
+{
+  "mcpServers": {
+    "labkit-ping": {
+      "command": "node",
+      "args": ["labkit/mcp/ping.mjs"],
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}
 ```
 
-The hub has the same config under **Show config with full paths**.
+3. The server should turn green. In the chat, ask: *Call the labkit ping tool.* Kiro asks before it runs the tool, because `autoApprove` is empty. Answer yes; it should reply `pong`.
+4. Add the other three servers the same way. Only the file name in `args` changes. Test each one:
 
-Kiro runs read-only tools without asking. It asks you before it changes Jira or Confluence, and before every SQL query.
+| Server | `args` | Try |
+|---|---|---|
+| `labkit-atlassian` | `["labkit/mcp/atlassian.mjs"]` | *List the Jira projects.* |
+| `labkit-grafana` | `["labkit/mcp/grafana.mjs"]` | *Show errors from the last hour.* |
+| `labkit-db` | `["labkit/mcp/db.mjs"]` | *List the tables in the staging DB.* |
+
+5. Decide what Kiro may run without asking. Put only **read-only** tools in `autoApprove`, for example `["searchJiraIssuesUsingJql", "getJiraIssue"]` or `["list_tables", "describe_table"]`. Keep tools that change Jira or Confluence, and the DB `query` tool, out of it, so Kiro asks you first.
+
+If a server stays red:
+
+- Check that `node -v` works in a new terminal.
+- Use the full path to the file in `args`, for example `"C:\\Users\\you\\pwdk-bca-lab\\labkit\\mcp\\ping.mjs"`.
+- The hub's **Show config with full paths** button gives the exact text.
+
+Stuck, or short on time? This writes the full config for you:
+
+```bat
+node labkit\cli.mjs kiro-config --write
+```
+
+Add `--absolute` for full paths.
 
 ## 3b. Optional: connect like a remote server
 
@@ -297,7 +326,7 @@ Tips:
 | Hub shows the staging DB as not running | Start the backend with `labkit\backend.cmd`, not with plain `mvnw`. |
 | Grafana shows no logs | The backend must run with the labkit profile. Then use the app, or click **Run traffic** on the hub. |
 | `JAVA_HOME is not set` | Install JDK 17, set `JAVA_HOME` to its folder, open a new terminal. |
-| Kiro shows the MCP servers in red | Run `node labkit\cli.mjs kiro-config --absolute --write` and reload. Check that `node -v` works in a new terminal. |
+| Kiro shows the MCP servers in red | Check that `node -v` works in a new terminal. Use full paths in `args`, or run `node labkit\cli.mjs kiro-config --absolute --write` and reload. |
 | `ExperimentalWarning: SQLite` | Harmless. `start.cmd` hides it. |
 | `jira.labbank.localhost` does not open | Check the gateway line in `start.cmd` and `preflight.cmd`. Add `:8000` if the gateway uses 8000. Or use the `127.0.0.1` address. |
 | The browser asks to allow a network connection | Labkit only listens on `127.0.0.1`. You can deny it. |
@@ -306,7 +335,7 @@ Tips:
 
 Kiro can drive Chrome through the Playwright MCP server. It needs npm access and Chrome. Day 2 works without it.
 
-To turn it on, set `"disabled": false` for `playwright` in `.kiro/settings/mcp.json`, then reload the MCP servers in Kiro. The first start downloads `@playwright/mcp` with `npx`.
+To turn it on, add this entry to `.kiro/settings/mcp.json`, then reload the MCP servers in Kiro: `"playwright": { "command": "npx", "args": ["-y", "@playwright/mcp@latest", "--browser", "chrome"] }`. The first start downloads `@playwright/mcp` with `npx`.
 
 ## For trainers
 
@@ -325,7 +354,6 @@ To turn it on, set `"disabled": false` for `playwright` in `.kiro/settings/mcp.j
 | `labkit/seed/` | Jira tickets, Confluence pages and the traffic scenario |
 | `labkit/test/` | Tests: `node --test labkit/test/*.test.mjs` |
 | `backend/.../labkit/` | Backend code for the `labkit` profile: JSON request log with masking, read-only staging DB |
-| `.kiro/settings/mcp.json` | Registers the local MCP servers in Kiro |
 
 No npm or Maven dependencies were added. Labkit uses Node built-ins only (`node:http`, `node:sqlite`, `node:test`).
 
