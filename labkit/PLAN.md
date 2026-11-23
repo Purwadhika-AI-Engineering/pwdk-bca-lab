@@ -42,7 +42,7 @@ labkit/
   services/
     hub/        server.mjs  ui/
     atlassian/  server.mjs  jql.mjs  cql.mjs  ui/
-    grafana/    server.mjs  logql.mjs  ui/
+    grafana/    server.mjs  logql.mjs  promql.mjs  ui/
   mcp/          atlassian.mjs  grafana.mjs  db.mjs
   seed/         atlassian.json  traffic-scenario.json
   test/         *.test.mjs (node --test)
@@ -56,14 +56,16 @@ backend/                            small changes, only under the `labkit` Sprin
 | Server | Tools (names mirror the real servers) |
 |---|---|
 | atlassian | `searchJiraIssuesUsingJql`, `getJiraIssue`, `createJiraIssue`, `editJiraIssue`, `addCommentToJiraIssue`, `getTransitionsForJiraIssue`, `transitionJiraIssue`, `getConfluenceSpaces`, `searchConfluenceUsingCql`, `getConfluencePage`, `createConfluencePage`, `updateConfluencePage`. Also, because real agents call them first: `getAccessibleAtlassianResources`, `atlassianUserInfo`, `lookupJiraAccountId`, `getVisibleJiraProjects`, `getPagesInConfluenceSpace`. Read-only tools are in `autoApprove`; writes ask the user. |
-| grafana | `query_loki_logs`, `list_loki_label_names`, `list_loki_label_values`, `query_prometheus` (metrics derived from logs) |
+| grafana | `query_loki_logs`, `list_loki_label_names`, `list_loki_label_values`, `query_prometheus` (metrics derived from logs). Also `list_datasources` and `list_prometheus_metric_names`. |
 | db | `list_tables`, `describe_table`, `query` (SELECT only, read-only DB user as the real guard) |
 | playwright (optional) | From `@playwright/mcp --browser chrome` |
 
 Query languages are small subsets:
 - JQL: `project`, `status`, `assignee`, `labels`, `priority`, `text ~`, `AND`/`OR`, `ORDER BY`.
 - CQL: `space`, `title ~`, `text ~`.
-- LogQL: label matchers plus `|=`, `!=`, `| json`, time range.
+- LogQL: label matchers plus `|=`, `!=`, `|~`, `!~`, `| json`, `| field op value`, time range, and `count_over_time` / `rate` with `sum by`.
+- PromQL (metrics from the request log): `http_requests_total`, `http_request_duration_seconds_bucket`, `log_messages_total`; `rate`, `increase`, `sum/avg/min/max/count by`, `histogram_quantile`, `+ - * /`.
+- DB `query` runs as the read-only user; it is the only DB tool not auto-approved, so the human sees each SQL.
 
 ## Work map
 

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lab Bank Grafana (labkit)</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <strong class="brand">Grafana <span>labkit</span></strong>
+    <nav>
+      <a href="#dashboard">Dashboard: banklab-backend</a>
+      <a href="#explore">Explore</a>
+      <a href="http://127.0.0.1:4300/">Hub</a>
+    </nav>
+    <select id="minutes" title="Time range">
+      <option value="15">Last 15 minutes</option>
+      <option value="30" selected>Last 30 minutes</option>
+      <option value="60">Last 1 hour</option>
+      <option value="360">Last 6 hours</option>
+    </select>
+    <span id="updated" class="muted"></span>
+  </header>
+
+  <main>
+    <section id="dashboard">
+      <div class="stats">
+        <div class="stat"><div class="label">Requests</div><div class="value" id="total">–</div></div>
+        <div class="stat"><div class="label">Error rate (4xx + 5xx)</div><div class="value" id="errorRate">–</div></div>
+        <div class="stat"><div class="label">5xx responses</div><div class="value" id="serverErrors">–</div></div>
+        <div class="stat"><div class="label">p95 latency</div><div class="value" id="p95">–</div></div>
+      </div>
+      <div class="panel">
+        <h2>Requests per minute <span class="legend"><i class="ok"></i>2xx/3xx <i class="client"></i>4xx <i class="server"></i>5xx</span></h2>
+        <svg id="chart" viewBox="0 0 900 200" preserveAspectRatio="none" role="img" aria-label="Requests per minute"></svg>
+      </div>
+      <div class="grid2">
+        <div class="panel">
+          <h2>Routes</h2>
+          <table><thead><tr><th>Route</th><th>Requests</th><th>Errors</th><th>p95</th></tr></thead><tbody id="routes"></tbody></table>
+        </div>
+        <div class="panel">
+          <h2>Recent warnings and errors</h2>
+          <ol id="recent" class="logs"></ol>
+        </div>
+      </div>
+    </section>
+
+    <section id="explore" hidden>
+      <div class="panel">
+        <form id="exploreForm" class="toolbar">
+          <select id="lang">
+            <option value="logql">Loki (LogQL)</option>
+            <option value="promql">Prometheus (PromQL)</option>
+          </select>
+          <input id="query" spellcheck="false" value='{job="banklab-backend", level=~"warn|error"}'>
+          <button>Run</button>
+        </form>
+        <p class="muted" id="hint"></p>
+        <p class="error" id="error" hidden></p>
+        <div id="result"></div>
+      </div>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
