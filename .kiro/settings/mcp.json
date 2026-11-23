@@ -59,6 +59,18 @@
         "list_tables",
         "describe_table"
       ]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest",
+        "--browser",
+        "chrome"
+      ],
+      "env": {},
+      "disabled": true,
+      "autoApprove": []
     }
   }
 }
