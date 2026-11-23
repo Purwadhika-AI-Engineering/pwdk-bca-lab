@@ -1,0 +1,134 @@
+{
+  "_note": "Seed for the labkit Atlassian mock. Restored by labkit\\reset.cmd. Dates like -2d are relative to the reset time. Tickets describe symptoms only.",
+  "currentUser": "participant",
+  "users": [
+    { "accountId": "participant", "displayName": "You (participant)", "email": "participant@labbank.example" },
+    { "accountId": "sari", "displayName": "Sari Wulandari", "email": "sari@labbank.example" },
+    { "accountId": "dimas", "displayName": "Dimas Pratama", "email": "dimas@labbank.example" },
+    { "accountId": "rina", "displayName": "Rina Kusuma", "email": "rina@labbank.example" },
+    { "accountId": "yoga", "displayName": "Yoga Saputra", "email": "yoga@labbank.example" }
+  ],
+  "projects": [{ "key": "LB", "name": "Lab Bank", "lead": "sari" }],
+  "issues": [
+    {
+      "project": "LB",
+      "type": "Story",
+      "summary": "Show and hide password on the login page",
+      "description": "As a customer, I want to tap an eye icon to show my password while I type it, so I make fewer login mistakes.\n\n## Acceptance criteria\n\n- An eye icon in the password field toggles between hidden and shown.\n- The password is hidden again after a failed login.\n- Works with the keyboard (Tab, Enter).",
+      "status": "To Do",
+      "priority": "Low",
+      "reporter": "sari",
+      "labels": ["frontend", "ux"],
+      "created": "-9d"
+    },
+    {
+      "project": "LB",
+      "type": "Task",
+      "summary": "Point the Postman sit environment to the new staging host",
+      "description": "Staging moved to the labkit setup. Update `postman/sit.postman_environment.json` and tell QA.",
+      "status": "Done",
+      "priority": "Medium",
+      "assignee": "rina",
+      "reporter": "dimas",
+      "labels": ["qa", "staging"],
+      "created": "-8d",
+      "updated": "-6d",
+      "comments": [{ "author": "rina", "body": "Done. Smoke collection passes on staging.", "created": "-6d" }]
+    },
+    {
+      "project": "LB",
+      "type": "Bug",
+      "summary": "Transfer to BNI after 3 pm stays PENDING",
+      "description": "Customer report via the call center.\n\n> I sent money to a BNI account at 15:20 and the receipt says PENDING. Is my money lost?\n\nCustomer user ID: `budi`. Target bank code 009, account `******9123`.\n\nPlease check if this is a bug.",
+      "status": "To Do",
+      "priority": "Medium",
+      "reporter": "yoga",
+      "labels": ["customer-report", "transfer", "interbank"],
+      "created": "-4d",
+      "comments": [{ "author": "sari", "body": "Check against the PRD before we spend time on this.", "created": "-3d" }]
+    },
+    {
+      "project": "LB",
+      "type": "Story",
+      "summary": "Error messages in Bahasa Indonesia",
+      "description": "All error messages from the API are in English today. Customers asked for Bahasa Indonesia.\n\nScope to agree: API message, screen text, or both? Keep the `errorCode` values as they are.",
+      "status": "To Do",
+      "priority": "Low",
+      "reporter": "sari",
+      "labels": ["i18n"],
+      "created": "-12d"
+    },
+    {
+      "project": "LB",
+      "type": "Task",
+      "summary": "Add the account type icon on the dashboard",
+      "description": "Show a small icon for savings and current accounts on the dashboard cards.",
+      "status": "In Progress",
+      "priority": "Low",
+      "assignee": "dimas",
+      "reporter": "sari",
+      "labels": ["frontend"],
+      "created": "-5d",
+      "updated": "-1d"
+    },
+    {
+      "project": "LB",
+      "type": "Bug",
+      "summary": "Balance after transfer is far too high on the receipt",
+      "description": "Customer complaint, received by the call center this morning.\n\n## What the customer says\n\n> I moved Rp50.000 from my savings account `******7890` to my friend at Lab Bank. The receipt said my balance after the transfer was **Rp7.495.000.000**. I do not have that much money! My dashboard showed the same big number. When I opened the app again later, it looked normal.\n\n## Details\n\n- Customer user ID: `andi` (demo user)\n- Channel: web app\n- Transfer: Rp50.000, Lab Bank to Lab Bank (bank code 999), to account `******8901`\n- Time: yesterday, during office hours (WIB)\n- The customer did not lose money, as far as we know. They are worried and want an answer today.\n\n## Asked by the call center\n\n1. Is the customer's real balance correct?\n2. What went wrong, and can it happen to other customers?",
+      "status": "To Do",
+      "priority": "High",
+      "reporter": "yoga",
+      "labels": ["customer-report", "transfer"],
+      "created": "-1d",
+      "comments": [
+        { "author": "yoga", "body": "Customer called again. Please give us something we can tell them.", "created": "-20h" },
+        { "author": "rina", "body": "I could not check it yet. We need the staging logs and the data to confirm. Picking this up in the lab session.", "created": "-18h" }
+      ]
+    },
+    {
+      "project": "LB",
+      "type": "Task",
+      "summary": "Write the runbook for staging resets",
+      "description": "Document how to reset Jira, Confluence and the staging DB between training groups.",
+      "status": "Done",
+      "priority": "Medium",
+      "assignee": "dimas",
+      "reporter": "dimas",
+      "labels": ["docs", "staging"],
+      "created": "-15d",
+      "updated": "-10d"
+    }
+  ],
+  "spaces": [
+    {
+      "key": "LB",
+      "name": "Lab Bank",
+      "description": "Team space for the Lab Bank transfer app",
+      "pages": [
+        {
+          "title": "Lab Bank team home",
+          "home": true,
+          "bodyFile": "pages/home.md",
+          "author": "sari",
+          "created": "-30d",
+          "children": [
+            { "title": "Architecture overview", "bodyFile": "pages/architecture.md", "author": "dimas", "created": "-28d", "updated": "-7d" },
+            { "title": "Staging environment (labkit)", "bodyFile": "pages/staging.md", "author": "dimas", "created": "-10d" },
+            { "title": "Incident runbook", "bodyFile": "pages/runbook.md", "author": "dimas", "created": "-20d", "updated": "-5d" },
+            {
+              "title": "Postmortems",
+              "body": "# Postmortems\n\nOne page per incident. Start from the **Postmortem template** and name the page `Postmortem: <short title> (<Jira key>)`.\n\nBlameless: describe systems and decisions, not people.",
+              "author": "sari",
+              "created": "-30d",
+              "children": [
+                { "title": "Postmortem template", "bodyFile": "pages/postmortem-template.md", "author": "sari", "created": "-30d" },
+                { "title": "Postmortem: staging login outage (LB-0)", "bodyFile": "pages/postmortem-example.md", "author": "dimas", "created": "-21d" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

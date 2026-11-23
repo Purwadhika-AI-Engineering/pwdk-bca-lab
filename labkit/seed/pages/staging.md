@@ -1,0 +1,33 @@
+# Staging environment (labkit)
+
+Staging runs on your laptop for the training. Everything listens on `127.0.0.1` only.
+
+| Service | Address |
+|---|---|
+| Labkit hub (links, health, reset) | http://127.0.0.1:4300 |
+| Jira and Confluence | http://127.0.0.1:4310 |
+| Grafana (logs and metrics) | http://127.0.0.1:4330 |
+| API | http://127.0.0.1:8080 |
+| Web app | http://127.0.0.1:4200 |
+| Database (read-only, Postgres protocol) | 127.0.0.1:5435, database `banklab` |
+
+## Start
+
+1. `labkit\start.cmd` starts the hub, Jira/Confluence and Grafana.
+2. In `backend`: `mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=labkit`
+3. In `frontend`: `npm start`
+
+## Demo users
+
+All passwords are `Password123!`.
+
+| User ID | Accounts |
+|---|---|
+| `andi` | `******7890` (savings), `******7891` (current) |
+| `budi` | `******8901` |
+| `citra` | `******9012` |
+
+## Reset
+
+- Jira and Confluence: `labkit\reset.cmd` or the button on the hub.
+- Database: restart the backend. It is in memory.
