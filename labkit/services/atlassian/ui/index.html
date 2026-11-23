@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lab Bank Jira + Confluence (labkit)</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <strong class="brand">Lab Bank <span>staging</span></strong>
+    <nav>
+      <a href="#/board" data-nav="board">Jira board</a>
+      <a href="#/wiki" data-nav="wiki">Confluence</a>
+      <a href="http://127.0.0.1:4300/">Hub</a>
+    </nav>
+    <span id="live" title="The page refreshes when the data changes">● live</span>
+  </header>
+  <div class="layout">
+    <main id="main">Loading…</main>
+    <aside>
+      <h3>Recent changes</h3>
+      <ol id="events"></ol>
+    </aside>
+  </div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
