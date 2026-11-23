@@ -32,6 +32,8 @@ labkit/
   PLAN.md  README.md
   preflight.cmd  preflight.mjs      checks the laptop, writes preflight-report.txt
   start.cmd  start.mjs              starts hub, atlassian, grafana
+  backend.cmd                       starts the backend with SPRING_PROFILES_ACTIVE=labkit (avoids PowerShell -D quoting)
+  traffic.cmd                       runs traffic.mjs
   reset.cmd                         restores seed data
   cli.mjs                           fallback for every MCP tool
   traffic.mjs                       drives the API to fill the logs
@@ -45,7 +47,8 @@ labkit/
     grafana/    server.mjs  logql.mjs  promql.mjs  ui/
   mcp/          atlassian.mjs  grafana.mjs  db.mjs
   seed/         atlassian.json  traffic-scenario.json
-  test/         *.test.mjs (node --test)
+  test/         *.test.mjs (node --test); e2e.test.mjs runs the Day 2 loop over stdio when LABKIT_E2E=1
+  docs/img/     README screenshots
   data/         runtime files, gitignored
 .kiro/settings/mcp.json             registers the MCP servers
 backend/                            small changes, only under the `labkit` Spring profile (Phase 2)
@@ -66,6 +69,10 @@ Query languages are small subsets:
 - LogQL: label matchers plus `|=`, `!=`, `|~`, `!~`, `| json`, `| field op value`, time range, and `count_over_time` / `rate` with `sum by`.
 - PromQL (metrics from the request log): `http_requests_total`, `http_request_duration_seconds_bucket`, `log_messages_total`; `rate`, `increase`, `sum/avg/min/max/count by`, `histogram_quantile`, `+ - * /`.
 - DB `query` runs as the read-only user; it is the only DB tool not auto-approved, so the human sees each SQL.
+
+## Status (Mon 23 Nov)
+
+Done and committed on `feat/labkit`: 0.1–0.3, 1.1–1.3, 2.1–2.3, 3.1–3.4. The must-have loop (search a Jira issue, find errors in the logs, query the DB, comment, transition, create a Confluence page) passes over stdio MCP in `test/e2e.test.mjs`. Not yet done: a check in Kiro on Windows (0.3, 4.3) and Phase 4.
 
 ## Work map
 
@@ -124,6 +131,8 @@ After 0.3 lands (`lib/mcp.mjs`), Phase 1 and Phase 2 do not share files and can 
 | `node:sqlite` prints an ExperimentalWarning | Run with `--no-warnings=ExperimentalWarning`. |
 | Backend changes show up in the Lab 4 security review | Keep them in one `labkit` package and profile; tell facilitators. |
 | Request logs leak personal data | Mask in the filter; unit test the masking. |
+| Health checks pollute the backend logs | Hub, CLI and traffic check the backend with a TCP connect, never HTTP (an HTTP probe logs a 4xx/5xx line). |
+| `GET /api/accounts` needs `?owner=` | Traffic calls it like the frontend does (`?owner=<full name>`); the request log hides the query value. |
 | No time for everything | Must have by Thursday: 0.x, 1.x, 2.1–2.3, 3.1, 3.3. Nice to have: 3.4, Grafana dashboard polish, 4.2. |
 
 ## Not in scope

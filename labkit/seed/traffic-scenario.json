@@ -13,7 +13,7 @@
 
     { "name": "andi pays citra", "as": "andi", "call": "POST /api/transfers/inquiry", "body": { "bankCode": "999", "accountNo": "3456789012" }, "expect": 200 },
     { "as": "andi", "call": "POST /api/transfers", "body": { "fromAccount": "1234567891", "toBankCode": "999", "toAccount": "3456789012", "amount": 150000, "note": "Arisan November" }, "expect": 201 },
-    { "name": "Lab 5 case: andi sends Rp50.000 to budi", "as": "andi", "call": "POST /api/transfers/inquiry", "body": { "bankCode": "999", "accountNo": "2345678901" }, "expect": 200 },
+    { "name": "andi sends Rp50.000 to budi", "as": "andi", "call": "POST /api/transfers/inquiry", "body": { "bankCode": "999", "accountNo": "2345678901" }, "expect": 200 },
     { "as": "andi", "call": "POST /api/transfers", "body": { "fromAccount": "1234567890", "toBankCode": "999", "toAccount": "2345678901", "amount": 50000, "note": "Makan siang" }, "expect": 201 },
     { "as": "andi", "call": "GET /api/accounts?owner=Andi%20Wijaya", "expect": 200 },
     { "as": "andi", "call": "GET /api/accounts/1234567890/summary", "expect": 200 },

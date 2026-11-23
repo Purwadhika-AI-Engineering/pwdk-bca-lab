@@ -13,6 +13,7 @@
 // from a file: handy on Windows, where quoting is hard), --json (raw JSON output).
 
 import fs from 'node:fs';
+import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -162,7 +163,6 @@ async function status() {
     ['hub', 'http://127.0.0.1:4300/health'],
     ['atlassian', 'http://127.0.0.1:4310/health'],
     ['grafana', 'http://127.0.0.1:4330/health'],
-    ['backend', 'http://127.0.0.1:8080/api/auth/login'],
   ];
   for (const [name, url] of checks) {
     try {
@@ -172,6 +172,14 @@ async function status() {
       console.log(`${name.padEnd(10)} DOWN  ${url}`);
     }
   }
+  // TCP only for the backend: an HTTP probe would show up in its logs.
+  const backendUp = await new Promise((resolve) => {
+    const s = net.connect({ host: '127.0.0.1', port: 8080 });
+    s.setTimeout(1500, () => (s.destroy(), resolve(false)));
+    s.once('connect', () => (s.destroy(), resolve(true)));
+    s.once('error', () => resolve(false));
+  });
+  console.log(`backend    ${backendUp ? 'up (127.0.0.1:8080)' : 'DOWN  start it with labkit\\backend.cmd'}`);
   const { tools } = await import(pathToFileURL(path.join(HERE, SERVICES.db.file)).href).catch(() => ({ tools: null }));
   if (tools) {
     try {
@@ -190,6 +198,22 @@ async function reset() {
   return res.ok;
 }
 
+/** Prints the Kiro MCP config, or writes it with --write. --absolute uses full paths (fallback for Windows). */
+async function kiroConfig(args) {
+  const { mcpConfig, ROOT } = await import(pathToFileURL(path.join(HERE, 'services', 'hub', 'server.mjs')).href);
+  const absolute = args.includes('--absolute');
+  const text = JSON.stringify(mcpConfig({ absolute, node: absolute ? process.execPath : 'node' }), null, 2) + '\n';
+  if (!args.includes('--write')) {
+    process.stdout.write(text);
+    return 0;
+  }
+  const file = path.join(ROOT, '.kiro', 'settings', 'mcp.json');
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, text);
+  console.log(`Wrote ${file}. Reload the MCP servers in Kiro.`);
+  return 0;
+}
+
 export async function main(argv = process.argv.slice(2)) {
   const [service, toolName, ...rest] = argv;
   if (!service || service === 'help' || service === '--help') {
@@ -197,10 +221,12 @@ export async function main(argv = process.argv.slice(2)) {
     for (const [name, s] of Object.entries(SERVICES)) console.log(`  node labkit/cli.mjs ${name.padEnd(10)} ${s.about}`);
     console.log('  node labkit/cli.mjs status     check what is running');
     console.log('  node labkit/cli.mjs reset      restore the Jira + Confluence seed data');
+    console.log('  node labkit/cli.mjs kiro-config [--absolute] [--write]   print or write .kiro/settings/mcp.json');
     return 0;
   }
   if (service === 'status') return status().then(() => 0);
   if (service === 'reset') return (await reset()) ? 0 : 1;
+  if (service === 'kiro-config') return kiroConfig(argv.slice(1));
   if (!SERVICES[service]) {
     console.error(`Unknown service "${service}". Use one of: ${Object.keys(SERVICES).join(', ')}, status, reset`);
     return 2;

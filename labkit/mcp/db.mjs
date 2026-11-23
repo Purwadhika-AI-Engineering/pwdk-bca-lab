@@ -46,7 +46,7 @@ async function getClient() {
     const why = err.code === 'ECONNREFUSED' || /ECONNREFUSED|Timed out/.test(err.message) ? 'nothing is listening there' : err.message;
     throw new Error(
       `Cannot reach the staging DB at ${CONFIG.host}:${CONFIG.port} (${why}). ` +
-        'Start the backend with the labkit profile: cd backend, then mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=labkit',
+        'Start the backend with the labkit profile: labkit\\backend.cmd',
     );
   }
 }

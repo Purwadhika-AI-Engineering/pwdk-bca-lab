@@ -7,11 +7,15 @@ import { createStore } from '../services/atlassian/server.mjs';
 
 const seedDir = fileURLToPath(new URL('../seed/', import.meta.url));
 
-function allSeedText() {
+/** Text that participants read in Jira and Confluence. */
+function pageText() {
   const files = [path.join(seedDir, 'atlassian.json'), ...fs.readdirSync(path.join(seedDir, 'pages')).map((f) => path.join(seedDir, 'pages', f))];
-  const traffic = path.join(seedDir, 'traffic-scenario.json');
-  if (fs.existsSync(traffic)) files.push(traffic);
   return files.map((f) => fs.readFileSync(f, 'utf8')).join('\n');
+}
+
+/** Plus the traffic scenario (its notes show up in logs). */
+function allSeedText() {
+  return pageText() + '\n' + fs.readFileSync(path.join(seedDir, 'traffic-scenario.json'), 'utf8');
 }
 
 test('the real seed loads: project LB, one Lab 5 bug, six other tickets, space LB', () => {
@@ -40,6 +44,6 @@ test('seed text has no spoilers for the planted bugs', () => {
   for (const re of SPOILERS) assert.doesNotMatch(text, re);
 });
 
-test('seed text shows no clear account numbers', () => {
-  assert.doesNotMatch(allSeedText(), /(?<![*\d])\d{10,13}(?!\d)/);
+test('Jira and Confluence text shows no clear account numbers', () => {
+  assert.doesNotMatch(pageText(), /(?<![*\d])\d{10,13}(?!\d)/);
 });

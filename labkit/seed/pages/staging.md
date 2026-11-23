@@ -14,7 +14,7 @@ Staging runs on your laptop for the training. Everything listens on `127.0.0.1` 
 ## Start
 
 1. `labkit\start.cmd` starts the hub, Jira/Confluence and Grafana.
-2. In `backend`: `mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=labkit`
+2. `labkit\backend.cmd` starts the API with the labkit profile.
 3. In `frontend`: `npm start`
 
 ## Demo users

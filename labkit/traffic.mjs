@@ -8,6 +8,7 @@
 // Money moves in pairs, so demo balances end where they started (one small transfer goes to another bank).
 
 import fs from 'node:fs';
+import net from 'node:net';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -77,10 +78,16 @@ async function main() {
   const scenario = JSON.parse(fs.readFileSync(scenarioPath, 'utf8'));
   const loop = arg('loop', false);
 
-  try {
-    await fetch(`${api}/api/accounts`, { signal: AbortSignal.timeout(3000) });
-  } catch {
-    console.error(`Cannot reach the backend at ${api}. Start it first:\n  cd backend\n  mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=labkit`);
+  // TCP check: an HTTP probe would add a line to the logs.
+  const { hostname, port } = new URL(api);
+  const reachable = await new Promise((resolve) => {
+    const s = net.connect({ host: hostname, port: Number(port) || 80 });
+    s.setTimeout(3000, () => (s.destroy(), resolve(false)));
+    s.once('connect', () => (s.destroy(), resolve(true)));
+    s.once('error', () => resolve(false));
+  });
+  if (!reachable) {
+    console.error(`Cannot reach the backend at ${api}. Start it first: labkit\\backend.cmd`);
     process.exit(1);
   }
 

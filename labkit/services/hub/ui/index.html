@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Labkit hub</title>
+  <style>
+    :root { --bg: #f6f7f9; --card: #fff; --text: #1d2433; --muted: #667085; --line: #e4e7ec; --ok: #12b76a; --down: #f04438; --accent: #2e5bff;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 15px; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+    header { padding: 20px 28px 8px; }
+    h1 { margin: 0; font-size: 24px; }
+    header p { margin: 4px 0 0; color: var(--muted); }
+    main { padding: 12px 28px 40px; display: grid; gap: 16px; max-width: 1100px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+    .card h3 { margin: 0 0 6px; font-size: 15px; display: flex; gap: 8px; align-items: center; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #d0d5dd; display: inline-block; }
+    .dot.up { background: var(--ok); } .dot.down { background: var(--down); }
+    .muted { color: var(--muted); font-size: 13px; }
+    a { color: var(--accent); }
+    section > h2 { font-size: 16px; margin: 8px 0; }
+    button { background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 8px 14px; font: inherit; cursor: pointer; }
+    button.secondary { background: #fff; color: var(--text); border: 1px solid var(--line); }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    pre { background: #0f172a; color: #e2e8f0; padding: 12px; border-radius: 8px; overflow: auto; font-size: 12px; max-height: 320px; }
+    ol.steps li { margin: 6px 0; }
+    code { background: #eef1f6; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+    #msg { font-size: 13px; }
+    .events { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+    .events li { padding: 4px 0; border-bottom: 1px solid var(--line); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Labkit · Lab Bank staging</h1>
+    <p>Everything runs on this laptop, on 127.0.0.1. Dummy data only.</p>
+  </header>
+  <main>
+    <section>
+      <h2>Status</h2>
+      <div class="grid" id="parts"></div>
+    </section>
+
+    <section class="card">
+      <h2>Kiro MCP servers</h2>
+      <ol class="steps">
+        <li>Open this repo folder in Kiro. It reads <code>.kiro/settings/mcp.json</code>.</li>
+        <li>In the Kiro panel, open <b>MCP servers</b>. You should see <code>labkit-ping</code>, <code>labkit-atlassian</code>, <code>labkit-grafana</code>, <code>labkit-db</code>.</li>
+        <li>Ask Kiro: <i>"Call the labkit ping tool."</i> It should answer <code>pong</code>.</li>
+        <li>If the servers do not start, use full paths: copy the config below into <code>.kiro/settings/mcp.json</code>.</li>
+      </ol>
+      <div class="actions"><button class="secondary" id="showConfig">Show config with full paths</button><button class="secondary" id="copyConfig" hidden>Copy</button></div>
+      <pre id="config" hidden></pre>
+      <p class="muted">No MCP at all? Every tool also works from the command line: <code>node labkit/cli.mjs atlassian</code>, <code>node labkit/cli.mjs grafana</code>, <code>node labkit/cli.mjs db</code>.</p>
+    </section>
+
+    <section class="card">
+      <h2>Facilitator tools</h2>
+      <div class="actions">
+        <button id="traffic">Run traffic</button>
+        <button class="secondary" id="reset">Reset Jira + Confluence</button>
+        <button class="secondary" id="clearLogs">Clear Grafana logs</button>
+        <span id="msg" class="muted"></span>
+      </div>
+      <pre id="trafficOut" hidden></pre>
+    </section>
+
+    <section class="card">
+      <h2>Recent Jira and Confluence changes</h2>
+      <ol class="events" id="events"></ol>
+    </section>
+  </main>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+    const EXTRA = { atlassian: [['Jira board', 'http://127.0.0.1:4310/#/board'], ['Confluence', 'http://127.0.0.1:4310/#/wiki/LB']] };
+
+    async function status() {
+      try {
+        const { parts } = await (await fetch('/api/status')).json();
+        $('parts').innerHTML = parts.map((p) => {
+          const links = EXTRA[p.id] || (p.url ? [['Open', p.url]] : []);
+          return `<div class="card"><h3><span class="dot ${p.up ? 'up' : 'down'}"></span>${esc(p.name)}</h3>
+            <div class="muted">${p.up ? 'running' : `not running · start: <code>${esc(p.how)}</code>`}</div>
+            <div>${p.up ? links.map(([t, u]) => `<a href="${u}" target="_blank">${t}</a>`).join(' · ') : ''}</div>
+            ${p.id === 'grafana' && p.info ? `<div class="muted">${p.info.entries} log lines${p.info.log?.exists ? '' : ' · waiting for backend/logs/app.json'}</div>` : ''}</div>`;
+        }).join('');
+      } catch {
+        $('parts').innerHTML = '<p class="muted">Hub is offline.</p>';
+      }
+      try {
+        const { events } = await (await fetch('/api/events')).json();
+        $('events').innerHTML = events.slice(0, 12).map((e) => `<li><span class="muted">${new Date(e.at).toLocaleTimeString()}</span> <b>${esc(e.target)}</b> ${esc(e.kind)}: ${esc(e.summary)}</li>`).join('') || '<li class="muted">No changes yet</li>';
+      } catch {}
+    }
+
+    async function post(url) {
+      const res = await fetch(url, { method: 'POST' });
+      const body = await res.json().catch(() => ({}));
+      $('msg').textContent = res.ok ? body.message || 'Done' : body.errorMessages?.join('; ') || 'Failed';
+      return res.ok;
+    }
+
+    $('reset').onclick = () => confirm('Restore the Jira and Confluence seed data? Changes made by agents are lost.') && post('/api/reset').then(status);
+    $('clearLogs').onclick = () => post('/api/clear-logs');
+    $('traffic').onclick = async () => {
+      if (!(await post('/api/traffic'))) return;
+      $('msg').textContent = 'Traffic running…';
+      $('trafficOut').hidden = false;
+      const timer = setInterval(async () => {
+        const t = await (await fetch('/api/traffic')).json();
+        $('trafficOut').textContent = t.output;
+        if (!t.running) {
+          clearInterval(timer);
+          $('msg').textContent = t.code === 0 ? 'Traffic done.' : 'Traffic finished with differences (see output).';
+        }
+      }, 700);
+    };
+    $('showConfig').onclick = async () => {
+      const cfg = await (await fetch('/api/mcp-config?absolute=1')).json();
+      $('config').textContent = JSON.stringify(cfg, null, 2);
+      $('config').hidden = false;
+      $('copyConfig').hidden = false;
+    };
+    $('copyConfig').onclick = () => navigator.clipboard.writeText($('config').textContent).then(() => ($('msg').textContent = 'Config copied.'));
+    status();
+    setInterval(status, 3000);
+  </script>
+</body>
+</html>
