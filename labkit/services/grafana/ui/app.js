@@ -101,3 +101,9 @@ window.addEventListener('hashchange', show);
 show();
 tick();
 setInterval(tick, 3000);
+
+// Through the gateway (*.localhost), link to the hub by name too.
+if (location.hostname.endsWith('.localhost')) {
+  const hub = document.getElementById('hubLink');
+  if (hub) hub.href = `http://labkit.localhost${location.port ? `:${location.port}` : ''}/`;
+}

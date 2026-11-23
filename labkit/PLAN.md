@@ -13,6 +13,7 @@ Labkit is a local "BCA staging" for Day 2. Participants practise agentic work on
 | Node 22 or newer, JDK 17 | Use built-ins only: `node:http`, `node:sqlite`, `node:test`, global `fetch` and `WebSocket`. |
 | No new tools, npm and Maven access unknown | Zero npm dependencies. No new Maven dependencies. Playwright MCP is the only optional extra. |
 | MCP works for local servers only | Every mock has a stdio MCP server. A CLI calls the same endpoints, as a fallback. |
+| Real services have names, not ports | A gateway (`services/gateway`, in `start.cmd`) routes `*.labbank.localhost` by Host header. `.localhost` names resolve to loopback with no DNS or hosts file. It binds 127.0.0.1:80 (Windows allows it without admin), else :8000 (macOS needs root for 80). Preflight checks name lookup and the port. The 127.0.0.1 addresses keep working. |
 | Remote MCP is common at work | Each service also serves its tools at a URL (`/mcp`, MCP Streamable HTTP, Bearer token from `data/mcp-token.txt`), so participants can practise the URL + token setup. stdio stays the default. |
 | Jira and Confluence | One Atlassian mock. Tool names follow the Atlassian MCP server, so prompts carry over. |
 
@@ -40,11 +41,13 @@ labkit/
   traffic.mjs                       drives the API to fill the logs
   lib/
     mcp.mjs                         JSON-RPC: initialize, tools/list, tools/call; stdio and Streamable HTTP (mountHttp)
-    token.mjs                       API token for the remote endpoints, and their URLs
+    token.mjs                       API token for the remote endpoints
+    names.mjs  gateway.mjs          host names (*.labbank.localhost) and the host-based proxy
     http.mjs                        tiny router + JSON helpers
     pg.mjs                          minimal Postgres wire client (startup, password, simple query)
   services/
     hub/        server.mjs  ui/
+    gateway/    server.mjs          names -> ports, on 127.0.0.1:80 or :8000
     atlassian/  server.mjs  jql.mjs  cql.mjs  ui/
     grafana/    server.mjs  logql.mjs  promql.mjs  ui/
   mcp/          atlassian.mjs  grafana.mjs  db.mjs

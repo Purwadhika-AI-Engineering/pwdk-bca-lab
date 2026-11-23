@@ -7,11 +7,17 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer, runStdio } from '../lib/mcp.mjs';
 import { requestJson } from '../lib/http.mjs';
+import { gatewayPort, urlFor } from '../lib/names.mjs';
 
 export const BASE_URL = process.env.LABKIT_ATLASSIAN_URL || 'http://127.0.0.1:4310';
 const api = (method, p, body) => requestJson(BASE_URL, method, p, body);
 const enc = encodeURIComponent;
-const web = (hash) => `${BASE_URL}/${hash}`;
+// Links for humans: jira.labbank.localhost / confluence.labbank.localhost when the gateway runs.
+const web = (hash) => {
+  const port = gatewayPort();
+  if (!port) return `${BASE_URL}/${hash}`;
+  return urlFor(hash.startsWith('#/page') ? 'confluence.labbank.localhost' : 'jira.labbank.localhost', `/${hash}`, port);
+};
 
 const cloudId = { type: 'string', description: 'Optional. Ignored: labkit has one local site ("labkit").' };
 const issueKey = { type: 'string', description: 'Issue key or id, for example LB-1' };

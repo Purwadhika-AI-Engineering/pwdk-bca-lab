@@ -2,14 +2,17 @@
 
 Staging runs on your laptop for the training. Everything listens on `127.0.0.1` only.
 
-| Service | Address |
-|---|---|
-| Labkit hub (links, health, reset) | http://127.0.0.1:4300 |
-| Jira and Confluence | http://127.0.0.1:4310 |
-| Grafana (logs and metrics) | http://127.0.0.1:4330 |
-| API | http://127.0.0.1:8080 |
-| Web app | http://127.0.0.1:4200 |
-| Database (read-only, Postgres protocol) | 127.0.0.1:5435, database `banklab` |
+| Service | Name | Direct address |
+|---|---|---|
+| Labkit hub (links, health, reset) | http://labkit.localhost | http://127.0.0.1:4300 |
+| Jira | http://jira.labbank.localhost | http://127.0.0.1:4310 |
+| Confluence | http://confluence.labbank.localhost | http://127.0.0.1:4310 |
+| Grafana (logs and metrics) | http://grafana.labbank.localhost | http://127.0.0.1:4330 |
+| API | http://api.labbank.localhost | http://127.0.0.1:8080 |
+| Web app | http://app.labbank.localhost | http://127.0.0.1:4200 |
+| Database (read-only, Postgres protocol) | | 127.0.0.1:5435, database `banklab` |
+
+If a name does not open, add `:8000` after it (the gateway uses port 8000 when port 80 is not free).
 
 ## Start
 

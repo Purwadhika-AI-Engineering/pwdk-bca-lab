@@ -140,7 +140,7 @@ export function runStdio(server, { input = process.stdin, output = process.stdou
 // It also checks the Origin header, so a web page cannot call it (DNS rebinding).
 
 
-const LOCAL_ORIGIN = /^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i;
+const LOCAL_ORIGIN = /^https?:\/\/(127\.0\.0\.1|\[::1\]|([a-z0-9-]+\.)*localhost)(:\d+)?$/i;
 
 function sendJson(res, status, body, headers = {}) {
   const data = body === undefined ? '' : JSON.stringify(body);
@@ -171,7 +171,7 @@ export function mountHttp(router, path, server, { token, maxSessions = 1000 } = 
       return false;
     }
     if (token && !checkBearer(req.headers.authorization, token)) {
-      sendJson(res, 401, rpcError(null, -32001, 'Missing or wrong API token. Add the header "Authorization: Bearer <token>". Get the token on the labkit hub (http://127.0.0.1:4300).'), {
+      sendJson(res, 401, rpcError(null, -32001, 'Missing or wrong API token. Add the header "Authorization: Bearer <token>". Get the token on the labkit hub (http://labkit.localhost or http://127.0.0.1:4300).'), {
         'www-authenticate': 'Bearer realm="labkit"',
       });
       return false;

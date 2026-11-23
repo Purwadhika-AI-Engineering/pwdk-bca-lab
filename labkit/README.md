@@ -12,6 +12,23 @@ Labkit is a small "staging" for Day 2. It gives Kiro a Jira, a Confluence, Grafa
 | Backend API | http://127.0.0.1:8080 | The Lab Bank app, with the `labkit` profile |
 | Staging DB | `127.0.0.1:5435` | Read-only access to the app data |
 
+### Friendly names
+
+`start.cmd` also starts a small gateway, so you can use names instead of ports:
+
+| Name | Goes to |
+|---|---|
+| http://labkit.localhost | Hub |
+| http://jira.labbank.localhost | Jira |
+| http://confluence.labbank.localhost | Confluence |
+| http://grafana.labbank.localhost | Grafana |
+| http://api.labbank.localhost | Backend API |
+| http://app.labbank.localhost | Web app |
+
+- Names that end in `.localhost` always point to your own computer. No DNS server, no hosts file, no admin rights.
+- The gateway uses port 80 when it can (Windows), else port 8000. On a Mac it is 8000, so add `:8000`, for example http://jira.labbank.localhost:8000.
+- The `127.0.0.1` addresses always work too. `preflight.cmd` checks that the names work on your laptop.
+
 Kiro talks to these through four MCP servers: `labkit-atlassian`, `labkit-grafana`, `labkit-db` and `labkit-ping`.
 
 ## What you need
@@ -83,12 +100,12 @@ Kiro runs read-only tools without asking. It asks you before it changes Jira or 
 
 Real products (Atlassian, GitHub and others) give you a **URL** and a **sign-in or API token**, not a program to run. Labkit can act like that too, on `127.0.0.1`:
 
-| Server | URL |
-|---|---|
-| `labkit-atlassian` | `http://127.0.0.1:4310/mcp` |
-| `labkit-grafana` | `http://127.0.0.1:4330/mcp` |
-| `labkit-db` | `http://127.0.0.1:4300/mcp/db` |
-| `labkit-ping` | `http://127.0.0.1:4300/mcp/ping` |
+| Server | URL (add `:8000` after the name if the gateway uses port 8000) | Without the gateway |
+|---|---|---|
+| `labkit-atlassian` | `http://jira.labbank.localhost/mcp` | `http://127.0.0.1:4310/mcp` |
+| `labkit-grafana` | `http://grafana.labbank.localhost/mcp` | `http://127.0.0.1:4330/mcp` |
+| `labkit-db` | `http://db.labbank.localhost/mcp` | `http://127.0.0.1:4300/mcp/db` |
+| `labkit-ping` | `http://labkit.localhost/mcp/ping` | `http://127.0.0.1:4300/mcp/ping` |
 
 1. Open the hub. Under **Remote MCP servers (simulated)**, click **Show** to see your API token. Each laptop has its own.
 2. Put the servers in your **user** config, `%USERPROFILE%\.kiro\settings\mcp.json` (Mac: `~/.kiro/settings/mcp.json`), not in the repo. A token in the repo ends up in git.
@@ -98,7 +115,7 @@ Real products (Atlassian, GitHub and others) give you a **URL** and a **sign-in 
 {
   "mcpServers": {
     "labkit-atlassian": {
-      "url": "http://127.0.0.1:4310/mcp",
+      "url": "http://jira.labbank.localhost/mcp",
       "headers": { "Authorization": "Bearer <your labkit API token>" }
     }
   }
@@ -107,7 +124,7 @@ Real products (Atlassian, GitHub and others) give you a **URL** and a **sign-in 
 
 4. Reload the MCP servers in Kiro. Without the token, or with a wrong one, the server answers `401`.
 
-The hub's **Show remote config** button, or `node labkit\cli.mjs kiro-config --remote`, prints the full config with your token. Use either the local servers (section 3) or the remote ones, not both, or Kiro shows every tool twice.
+The hub's **Show remote config** button, or `node labkit\cli.mjs kiro-config --remote`, prints the full config with your token and the right port. Use either the local servers (section 3) or the remote ones, not both, or Kiro shows every tool twice.
 
 The remote endpoints follow the MCP "Streamable HTTP" transport: `POST` with JSON-RPC, an `Mcp-Session-Id` from `initialize`, `401` without a valid Bearer token, `403` for a web page from another origin.
 
@@ -190,6 +207,7 @@ Tips:
 | `JAVA_HOME is not set` | Install JDK 17, set `JAVA_HOME` to its folder, open a new terminal. |
 | Kiro shows the MCP servers in red | Run `node labkit\cli.mjs kiro-config --absolute --write` and reload. Check that `node -v` works in a new terminal. |
 | `ExperimentalWarning: SQLite` | Harmless. `start.cmd` hides it. |
+| `jira.labbank.localhost` does not open | Check the gateway line in `start.cmd` and `preflight.cmd`. Add `:8000` if the gateway uses 8000. Or use the `127.0.0.1` address. |
 | The browser asks to allow a network connection | Labkit only listens on `127.0.0.1`. You can deny it. |
 
 ## Optional: Playwright MCP

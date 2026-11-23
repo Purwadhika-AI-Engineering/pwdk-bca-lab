@@ -4,6 +4,7 @@
 // Uses Node built-ins only. Takes under 10 seconds.
 
 import { spawnSync } from 'node:child_process';
+import dns from 'node:dns/promises';
 import fs from 'node:fs';
 import net from 'node:net';
 import os from 'node:os';
@@ -103,6 +104,44 @@ async function checkPorts() {
     else if (err === 'EADDRINUSE') add('WARN', `Port ${port}`, `in use (${what}). Fine if labkit or the app is already running; otherwise stop what uses it.`);
     else add('FAIL', `Port ${port}`, `cannot bind on 127.0.0.1: ${err}`);
   }
+}
+
+const LOOPBACK = (a) => a === '::1' || a.startsWith('127.');
+
+/** Do *.localhost names point to this computer? Kiro and Node use the OS for this. */
+export async function checkNames(lookup = (h) => dns.lookup(h, { all: true })) {
+  const names = ['labkit.localhost', 'jira.labbank.localhost'];
+  const bad = [];
+  for (const name of names) {
+    try {
+      const addrs = (await lookup(name)).map((x) => x.address);
+      if (!addrs.length || !addrs.every(LOOPBACK)) bad.push(`${name} -> ${addrs.join(', ') || 'nothing'}`);
+    } catch (err) {
+      bad.push(`${name}: ${err.code || err.message}`);
+    }
+  }
+  if (!bad.length) return add('PASS', 'Host names', `*.localhost points to this computer (${names.join(', ')})`);
+  add('WARN', 'Host names', `${bad.join('; ')}. Use the 127.0.0.1 addresses instead of jira.labbank.localhost.`);
+}
+
+/** The gateway wants 127.0.0.1:80, else :8000. */
+async function checkGatewayPort() {
+  let why80 = '';
+  for (const port of [80, 8000]) {
+    const err = await checkPort(port);
+    if (!err) {
+      return add('PASS', 'Gateway port', port === 80 ? 'port 80 is free: host names work without a port number' : `port 80 is not available (${why80}); the gateway uses 8000 (http://jira.labbank.localhost:8000)`);
+    }
+    if (port === 80) why80 = err === 'EADDRINUSE' ? 'in use' : err === 'EACCES' ? 'needs admin on this OS' : err;
+    if (err === 'EADDRINUSE') {
+      const ours = await fetch(`http://127.0.0.1:${port}/health`, { headers: { host: 'labkit.localhost' }, signal: AbortSignal.timeout(1000) })
+        .then((r) => r.json())
+        .then((j) => j.service === 'hub')
+        .catch(() => false);
+      if (ours) return add('PASS', 'Gateway port', `labkit gateway already runs on port ${port}`);
+    }
+  }
+  add('INFO', 'Gateway port', 'ports 80 and 8000 are taken. Host names are off; the 127.0.0.1 addresses still work.');
 }
 
 export function chromeCandidates(env = process.env, platform = process.platform) {
@@ -226,7 +265,7 @@ async function main() {
   checkChrome();
   checkMavenCache();
   checkFolders();
-  await Promise.all([checkPorts(), checkNetwork()]);
+  await Promise.all([checkPorts(), checkNetwork(), checkNames(), checkGatewayPort()]);
   const text = formatReport(results, {
     date: new Date().toISOString(),
     os: `${os.type()} ${os.release()} ${os.arch()}`,

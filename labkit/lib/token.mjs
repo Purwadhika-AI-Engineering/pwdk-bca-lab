@@ -24,11 +24,3 @@ export function getToken(file = TOKEN_FILE) {
     return fs.readFileSync(file, 'utf8').trim();
   }
 }
-
-/** Remote MCP endpoints: one URL per "product", like real hosted servers. */
-export const REMOTE = {
-  'labkit-atlassian': { url: 'http://127.0.0.1:4310/mcp', file: 'atlassian.mjs' },
-  'labkit-grafana': { url: 'http://127.0.0.1:4330/mcp', file: 'grafana.mjs' },
-  'labkit-db': { url: 'http://127.0.0.1:4300/mcp/db', file: 'db.mjs' },
-  'labkit-ping': { url: 'http://127.0.0.1:4300/mcp/ping', file: 'ping.mjs' },
-};

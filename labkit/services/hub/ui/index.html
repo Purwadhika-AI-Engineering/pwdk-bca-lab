@@ -85,16 +85,27 @@
   <script>
     const $ = (id) => document.getElementById(id);
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-    const EXTRA = { atlassian: [['Jira board', 'http://127.0.0.1:4310/#/board'], ['Confluence', 'http://127.0.0.1:4310/#/wiki/LB']] };
+    // Links come from /api/urls: host names (jira.labbank.localhost) when the gateway runs.
+    let urls = {};
+    const link = (host, fallback) => urls[host]?.url || fallback;
+    const linksFor = (id) => ({
+      atlassian: [['Jira', link('jira.labbank.localhost', 'http://127.0.0.1:4310/#/board')], ['Confluence', link('confluence.labbank.localhost', 'http://127.0.0.1:4310/#/wiki/LB')]],
+      grafana: [['Open', link('grafana.labbank.localhost', 'http://127.0.0.1:4330/')]],
+      backend: [['API', link('api.labbank.localhost', 'http://127.0.0.1:8080/')]],
+      frontend: [['Open', link('app.labbank.localhost', 'http://localhost:4200/')]],
+    })[id] || [];
 
     async function status() {
       try {
-        const { parts } = await (await fetch('/api/status')).json();
+        const { parts, gateway } = await (await fetch('/api/status')).json();
+        urls = (await (await fetch('/api/urls')).json()).links;
+        parts.push({ id: 'gateway', name: 'Host names (gateway)', up: gateway.up, how: 'labkit\\start.cmd (optional)', note: gateway.up ? `*.localhost on port ${gateway.port}` : 'off: the 127.0.0.1 addresses still work' });
         $('parts').innerHTML = parts.map((p) => {
-          const links = EXTRA[p.id] || (p.url ? [['Open', p.url]] : []);
+          const links = linksFor(p.id);
           return `<div class="card"><h3><span class="dot ${p.up ? 'up' : 'down'}"></span>${esc(p.name)}</h3>
             <div class="muted">${p.up ? 'running' : `not running · start: <code>${esc(p.how)}</code>`}</div>
             <div>${p.up ? links.map(([t, u]) => `<a href="${u}" target="_blank">${t}</a>`).join(' · ') : ''}</div>
+            ${p.note ? `<div class="muted">${esc(p.note)}</div>` : ''}
             ${p.id === 'grafana' && p.info ? `<div class="muted">${p.info.entries} log lines${p.info.log?.exists ? '' : ' · waiting for backend/logs/app.json'}</div>` : ''}</div>`;
         }).join('');
       } catch {

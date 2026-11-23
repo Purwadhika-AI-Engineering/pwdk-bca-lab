@@ -88,13 +88,17 @@ test('Atlassian service answers MCP at /mcp, calling its own REST API', async ()
 });
 
 test('remote config uses URLs and the token, never commands', () => {
-  const cfg = mcpConfig({ remote: true, token: 'abc' });
+  const cfg = mcpConfig({ remote: true, token: 'abc', gateway: null });
   for (const name of ['labkit-atlassian', 'labkit-grafana', 'labkit-db', 'labkit-ping']) {
     const s = cfg.mcpServers[name];
     assert.match(s.url, /^http:\/\/127\.0\.0\.1:43\d0\/mcp/);
     assert.equal(s.headers.Authorization, 'Bearer abc');
     assert.equal(s.command, undefined);
   }
+  const named = mcpConfig({ remote: true, token: 'abc', gateway: 80 });
+  assert.equal(named.mcpServers['labkit-atlassian'].url, 'http://jira.labbank.localhost/mcp');
+  assert.equal(named.mcpServers['labkit-db'].url, 'http://db.labbank.localhost/mcp');
+  assert.equal(mcpConfig({ remote: true, gateway: 8000 }).mcpServers['labkit-grafana'].url, 'http://grafana.labbank.localhost:8000/mcp');
 });
 
 test('hub serves the token only to local host names', async () => {

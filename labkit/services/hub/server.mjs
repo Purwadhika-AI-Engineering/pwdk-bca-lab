@@ -7,7 +7,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createRouter, listen, HttpError } from '../../lib/http.mjs';
 import { mountHttp } from '../../lib/mcp.mjs';
-import { REMOTE } from '../../lib/token.mjs';
+import { HOSTS, gatewayPort, urlFor, remoteServers } from '../../lib/names.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const LABKIT = path.resolve(HERE, '..', '..');
@@ -56,12 +56,13 @@ async function check(part) {
  * - local (default): Kiro starts each server with node over stdio. absolute=true writes full paths.
  * - remote: each server is a URL with a Bearer token, like a hosted MCP server.
  */
-export function mcpConfig({ absolute = false, root = ROOT, node = 'node', remote = false, token = '<your labkit API token>' } = {}) {
+export function mcpConfig({ absolute = false, root = ROOT, node = 'node', remote = false, token = '<your labkit API token>', gateway = gatewayPort() } = {}) {
   const file = (name) => (absolute ? path.join(root, 'labkit', 'mcp', name) : `labkit/mcp/${name}`);
   const entry = (name, autoApprove) => {
     if (!remote) return { command: node, args: [file(name)], env: {}, disabled: false, autoApprove };
-    const id = Object.keys(REMOTE).find((k) => REMOTE[k].file === name);
-    return { url: REMOTE[id].url, headers: { Authorization: `Bearer ${token}` }, disabled: false, autoApprove };
+    const servers = remoteServers(gateway);
+    const id = Object.keys(servers).find((k) => servers[k].file === name);
+    return { url: servers[id].url, headers: { Authorization: `Bearer ${token}` }, disabled: false, autoApprove };
   };
   return {
     mcpServers: {
@@ -84,7 +85,18 @@ export function createApp({ mcp } = {}) {
     mountHttp(r, '/mcp/ping', mcp.ping, { token: mcp.token });
   }
   r.get('/health', () => ({ ok: true, service: 'hub' }));
-  r.get('/api/status', async () => ({ parts: await Promise.all(PARTS.map(check)), time: new Date().toISOString() }));
+  r.get('/api/status', async () => {
+    const gw = gatewayPort();
+    return { parts: await Promise.all(PARTS.map(check)), gateway: gw ? { up: true, port: gw } : { up: false }, time: new Date().toISOString() };
+  });
+  // Links for the hub page: host names when the gateway runs, else 127.0.0.1 addresses.
+  r.get('/api/urls', () => {
+    const port = gatewayPort();
+    return {
+      gateway: port,
+      links: Object.fromEntries(Object.entries(HOSTS).map(([host, h]) => [host, { about: h.about, url: urlFor(host, h.path ? Object.keys(h.path)[0] : '/', port) }])),
+    };
+  });
   r.post('/api/reset', async () => {
     const res = await fetch('http://127.0.0.1:4310/admin/reset', { method: 'POST' }).catch(() => null);
     if (!res?.ok) throw new HttpError(502, 'The Atlassian mock is not running. Start labkit\\start.cmd first.');
@@ -114,7 +126,7 @@ export function createApp({ mcp } = {}) {
   // The token is only for this laptop: refuse requests that come in under another host name (DNS rebinding).
   r.get('/api/remote-mcp', ({ req }) => {
     if (!/^(127\.0\.0\.1|localhost)(:\d+)?$/i.test(req.headers.host || '')) throw new HttpError(403, 'Forbidden');
-    return { token: mcp?.token || null, servers: Object.entries(REMOTE).map(([name, v]) => ({ name, url: v.url })) };
+    return { token: mcp?.token || null, servers: Object.entries(remoteServers()).map(([name, v]) => ({ name, url: v.url })) };
   });
   r.get('/api/events', async () => {
     const res = await fetch('http://127.0.0.1:4310/admin/events').catch(() => null);

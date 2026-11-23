@@ -8,6 +8,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { gatewayPort } from './lib/names.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -15,7 +16,11 @@ const SERVICES = [
   { name: 'atlassian', file: 'services/atlassian/server.mjs', health: 'http://127.0.0.1:4310/health', sqlite: true },
   { name: 'grafana', file: 'services/grafana/server.mjs', health: 'http://127.0.0.1:4330/health' },
   { name: 'hub', file: 'services/hub/server.mjs', health: 'http://127.0.0.1:4300/health' },
+  // Optional: friendly host names. Labkit works without it.
+  { name: 'gateway', file: 'services/gateway/server.mjs', optional: true },
 ];
+
+const isUp = (s) => (s.health ? up(s.health) : Promise.resolve(Boolean(gatewayPort())));
 
 async function up(url) {
   try {
@@ -42,7 +47,7 @@ async function main() {
   const children = [];
   let stopping = false;
   for (const s of SERVICES) {
-    if (await up(s.health)) {
+    if (await isUp(s)) {
       console.log(`[${s.name}] already running`);
       continue;
     }
@@ -64,20 +69,29 @@ async function main() {
     prefix(child.stdout, process.stdout);
     prefix(child.stderr, process.stderr);
     child.on('exit', (code) => {
-      if (!stopping) console.error(`[${s.name}] stopped (exit ${code}). Check the messages above, then run labkit\\start.cmd again.`);
+      if (stopping) return;
+      if (s.optional) console.log(`[${s.name}] not running. Use the 127.0.0.1 addresses instead.`);
+      else console.error(`[${s.name}] stopped (exit ${code}). Check the messages above, then run labkit\\start.cmd again.`);
     });
     children.push(child);
   }
 
   for (let i = 0; i < 40; i++) {
-    const states = await Promise.all(SERVICES.map((s) => up(s.health)));
+    const states = await Promise.all(SERVICES.map(isUp));
     if (states.every(Boolean)) break;
     await new Promise((r) => setTimeout(r, 250));
   }
-  const states = await Promise.all(SERVICES.map((s) => up(s.health)));
+  const states = await Promise.all(SERVICES.map(isUp));
+  const gw = gatewayPort();
+  const sfx = gw && gw !== 80 ? `:${gw}` : '';
+  const names = { atlassian: `http://jira.labbank.localhost${sfx}`, grafana: `http://grafana.labbank.localhost${sfx}`, hub: `http://labkit.localhost${sfx}`, gateway: `127.0.0.1:${gw}` };
   console.log('');
-  SERVICES.forEach((s, i) => console.log(`  ${states[i] ? 'OK  ' : 'DOWN'} ${s.name.padEnd(10)} ${s.health.replace('/health', '')}`));
-  console.log('\n  Open the hub: http://127.0.0.1:4300');
+  SERVICES.forEach((s, i) => {
+    const where = s.health ? s.health.replace('/health', '') : '';
+    const label = states[i] ? (gw ? `${names[s.name]}${where ? `  (${where})` : ''}` : where || 'off') : s.optional ? 'off: use the 127.0.0.1 addresses' : where;
+    console.log(`  ${states[i] ? 'OK  ' : s.optional ? 'OFF ' : 'DOWN'} ${s.name.padEnd(10)} ${label}`);
+  });
+  console.log(`\n  Open the hub: ${gw ? names.hub : 'http://127.0.0.1:4300'}`);
   console.log('  Backend with the labkit profile: labkit\\backend.cmd (a second terminal)');
   console.log('  Press Ctrl+C to stop labkit.\n');
   if (!children.length) process.exit(0);
