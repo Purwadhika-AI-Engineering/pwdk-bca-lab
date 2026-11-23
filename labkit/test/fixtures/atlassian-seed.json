@@ -1,0 +1,25 @@
+{
+  "currentUser": "me",
+  "users": [
+    { "accountId": "me", "displayName": "Participant" },
+    { "accountId": "rina", "displayName": "Rina QA" },
+    { "accountId": "dimas", "displayName": "Dimas Dev" }
+  ],
+  "projects": [{ "key": "LB", "name": "Lab Bank", "lead": "dimas" }, { "key": "OPS", "name": "Operations" }],
+  "issues": [
+    { "project": "LB", "type": "Bug", "summary": "Balance looks wrong after transfer", "description": "Customer saw a huge balance on the receipt.", "status": "To Do", "priority": "High", "assignee": "rina", "reporter": "dimas", "labels": ["customer-report", "transfer"], "created": "-2d",
+      "comments": [{ "author": "dimas", "body": "Can you reproduce on staging?", "created": "-1d" }] },
+    { "project": "LB", "type": "Task", "summary": "Update login page copy", "status": "In Progress", "priority": "Low", "assignee": "me", "labels": ["ui"], "created": "-5d" },
+    { "project": "LB", "type": "Story", "summary": "Export history as CSV", "status": "Done", "priority": "Medium", "created": "-10d" },
+    { "project": "OPS", "type": "Task", "summary": "Rotate staging certificates", "status": "To Do", "priority": "Medium", "assignee": "dimas", "created": "-1d" }
+  ],
+  "spaces": [
+    { "key": "LB", "name": "Lab Bank", "description": "Team space", "pages": [
+      { "title": "Lab Bank home", "home": true, "body": "# Welcome", "children": [
+        { "title": "Architecture", "body": "The backend is Spring Boot. Balances are stored in the accounts table." },
+        { "title": "Incident runbook", "body": "Step 1: check Grafana logs for errors." }
+      ] }
+    ] },
+    { "key": "OPS", "name": "Operations", "pages": [{ "title": "On-call", "body": "Pager rota" }] }
+  ]
+}
