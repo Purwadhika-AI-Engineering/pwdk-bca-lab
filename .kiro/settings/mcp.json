@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "labkit-ping": {
+      "command": "node",
+      "args": ["labkit/mcp/ping.mjs"],
+      "env": {},
+      "disabled": false,
+      "autoApprove": ["ping"]
+    }
+  }
+}
