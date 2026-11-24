@@ -49,10 +49,17 @@ Use this file as the source for your steering files:
 - Angular guards: call them with `TestBed.runInInjectionContext`. Mock services with `useValue`. No `any`.
 - One behavior per test. Name the test by behavior, for example `rejectsAmountAboveDailyLimit`.
 - MUST put the case ID from `docs/test-cases.md` in the test name: `@DisplayName("T5 Amount above daily limit (R4)")` in Java, `it('T5 …')` in Angular. Why: each test traces back to a case and a PRD rule.
-- MUST cover limits and errors, not only the happy path: minimum Rp10.000, daily limit Rp50.000.000, cut-off 15.00 WIB.
-- MUST use a fixed `Clock` (zone `Asia/Jakarta`) for time rules. Never `now()`, random data or test order.
-- MUST assert real values. "Not null" alone is not a test.
-- MUST NOT mock the class under test, and MUST NOT copy the production formula to compute the expected value.
+
+Five weak spots of AI-written tests, one rule each:
+
+- No real assert: MUST assert the business result, not just "not null".
+- Mocks the target: MUST NOT mock the class under test. Mock only its dependencies.
+- Happy path only: MUST test each limit just below, at and just above, plus the error cases. Limits: minimum Rp10.000, daily limit Rp50.000.000, cut-off 15.00 WIB.
+- Copies the logic: MUST use fixed expected values, for example `new BigDecimal("50000000")`. MUST NOT copy the production formula to compute them.
+- Flaky: MUST NOT use `now()`, random data or test order. Use the injected `Clock` (zone `Asia/Jakarta`).
+
+Also:
+
 - MUST use synthetic test data only, such as the demo users in `README.md`.
 - MUST NOT change production code just to make a test pass. Report it instead.
 
