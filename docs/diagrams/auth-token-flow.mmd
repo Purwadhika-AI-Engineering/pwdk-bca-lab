@@ -1,0 +1,40 @@
+flowchart TD
+    subgraph ISSUE["Token creation: TokenUtil.issue(username), L21-26"]
+        I0(["issue(username) is called<br/>caller not checked here"]) --> I1["L22: expiry = currentTimeMillis + TTL_MILLIS<br/>TTL_MILLIS = 8 hours, L16"]
+        I1 --> I2["L23-24: payload = Base64Url, no padding, of<br/>username + ':' + expiry"]
+        I2 --> I3["L56-61 sign: HMAC-SHA256 of payload<br/>key = SECRET, L15<br/>result Base64Url, no padding"]
+        I3 -->|"HMAC error, L62-63"| IX["throw IllegalStateException"]
+        I3 --> I4(["L25: return payload + '.' + signature"])
+    end
+
+    subgraph FILTER["Request check: AuthFilter, L23-42"]
+        R0(["HTTP request"]) --> R1{"L23-28 shouldNotFilter:<br/>path does not start with /api/<br/>OR path = /api/auth/login<br/>OR method = OPTIONS?"}
+        R1 -->|yes| RSKIP(["Filter skipped:<br/>request continues without<br/>'username' attribute"])
+        R1 -->|no| R2["L33: read Authorization header"]
+        R2 --> R3{"L34: header not null AND<br/>starts with 'Bearer '?"}
+        R3 -->|yes| R4["L34: token = header.substring(7)"]
+        R3 -->|no| R5["L34: token = null"]
+        R4 --> R6["L35: username = TokenUtil.verify(token)"]
+        R5 --> R6
+
+        subgraph VERIFY["TokenUtil.verify(token), L31-54"]
+            V1{"L32: token null OR<br/>contains no '.'?"}
+            V1 -->|no| V2{"L35-36: split on '.'<br/>exactly 2 parts?"}
+            V2 -->|yes| V3["L39: recompute sign(part 1)<br/>this call is outside the try"]
+            V3 --> V4{"L39-40: MessageDigest.isEqual:<br/>signature equals part 2?"}
+            V4 -->|yes| V5["L44-46: decode part 1,<br/>split at last ':', parse expiry"]
+            V5 --> V6{"L47: expiry before now?"}
+            V6 -->|no| VU["L50: return username"]
+            V1 -->|yes| VN["return null"]
+            V2 -->|no| VN
+            V4 -->|no| VN
+            V5 -->|"RuntimeException, L51-52"| VN
+            V6 -->|yes| VN
+        end
+
+        R6 --> V1
+        V3 -->|"HMAC error, L62-63"| VX["IllegalStateException escapes the filter<br/>client result UNCLEAR"]
+        VN --> F1(["L36-38: status 401, empty body, stop"])
+        VU --> F2["L40: set request attribute 'username'"]
+        F2 --> F3(["L41: chain.doFilter, request continues"])
+    end

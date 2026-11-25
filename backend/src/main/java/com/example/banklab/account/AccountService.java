@@ -45,16 +45,15 @@ public class AccountService {
             used = BigDecimal.ZERO.setScale(2);
         }
 
-        AccountSummary s = new AccountSummary();
-        s.setAccountNo(a.getAccountNo());
-        s.setOwner(a.getOwner());
-        s.setAccountType(a.getAccountType());
-        s.setBalance(BigDecimal.valueOf(a.getBalanceCents(), 2));
-        s.setCurrency(a.getCurrency());
-        s.setDailyLimit(TransferService.DAILY_LIMIT);
-        s.setDailyLimitUsed(used);
-        s.setDailyLimitRemaining(TransferService.DAILY_LIMIT.subtract(used).max(BigDecimal.ZERO));
-        return s;
+        return new AccountSummary(
+                a.getAccountNo(),
+                a.getOwner(),
+                a.getAccountType(),
+                BigDecimal.valueOf(a.getBalanceCents(), 2),
+                a.getCurrency(),
+                TransferService.DAILY_LIMIT,
+                used,
+                TransferService.DAILY_LIMIT.subtract(used).max(BigDecimal.ZERO));
     }
 
     private Account load(String accountNo) {

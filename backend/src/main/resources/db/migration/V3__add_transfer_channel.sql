@@ -1,0 +1,1 @@
+ALTER TABLE transfers ADD COLUMN channel VARCHAR(20);
